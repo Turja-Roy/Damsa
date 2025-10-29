@@ -24,9 +24,27 @@ public:
     virtual G4VPhysicalVolume* Construct() override;
 
 private:
-    G4LogicalVolume* logicSiTracker;
-    G4LogicalVolume* logicCalorimeter;
     virtual void ConstructSDandField();
+    
+    void DefineMaterials();
+    void BuildTarget(G4LogicalVolume* worldLV, G4double& zPos);
+    void BuildVacuumChamber(G4LogicalVolume* worldLV, G4double& zPos);
+    void BuildMagnet(G4LogicalVolume* worldLV, G4double& zPos);
+    void BuildTrackerRegion(G4LogicalVolume* worldLV, G4double& zPos);
+    void BuildCalorimeter(G4LogicalVolume* worldLV, G4double& zPos);
+
+    G4double fWorldSize;
+    G4double fTargetX, fTargetY, fTargetZ;
+    G4double fChamberInnerRadius, fChamberWallThickness, fChamberLength;
+    G4double fMagnetOuterSize, fMagnetHollowSize;
+    G4double fTrackerSizeXY, fTrackerThickness, fTrackerHoleSize;
+    G4int fNumTrackers;
+    G4double fCaloSizeXY, fLayerThickness;
+    G4int fNumCaloLayers, fNumCrystalsPerLayer;
+
+    G4LogicalVolume* fLogicSiTracker;
+    G4LogicalVolume* fLogicCrystal;
 };
 
 #endif
+
