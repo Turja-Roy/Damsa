@@ -7,4 +7,4 @@
 /vis/scene/add/scale 10 cm
 /vis/scene/add/magneticField 50
 /vis/scene/add/eventID
-/vis/scene/endOfEventAction accumulate
+/vis/scene/endOfEventAction accumulate 100000

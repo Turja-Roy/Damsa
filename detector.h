@@ -27,17 +27,13 @@ inline G4bool DamsaSensitiveDetector::ProcessHits(G4Step* aStep, G4TouchableHist
 
     G4ThreeVector posPhoton = preStepPoint->GetPosition();
 
-    // G4cout << "Photon position: " << posPhoton << G4endl;
-
     const G4VTouchable* touchable = aStep->GetPreStepPoint()->GetTouchable();
     G4int copyNo = touchable->GetCopyNumber(0);
-
-    // G4cout << "Copy number: " << copyNo << G4endl;
 
     G4VPhysicalVolume* physVol = touchable->GetVolume();
     G4ThreeVector posDetector = physVol->GetTranslation();
 
-    G4cout << "Detector position: " << posDetector << G4endl;
+    G4cout << "Detector hit at position: " << posDetector << G4endl;
 
     G4int evt = G4RunManager::GetRunManager()->GetCurrentEvent()->GetEventID();
 

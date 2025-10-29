@@ -129,12 +129,12 @@ void DamsaDetectorConstruction::BuildVacuumChamber(G4LogicalVolume* worldLV, G4d
     new G4PVPlacement(0, G4ThreeVector(0., 0., zPos), logicChamberWall, "physChamberWall", worldLV, false, 0, true);
     new G4PVPlacement(0, G4ThreeVector(0., 0., zPos), logicChamberVacuum, "physChamberVacuum", worldLV, false, 0, true);
     
-    G4double endCapFrontZ = zPos - fChamberLength/2. + fChamberWallThickness/2.;
-    G4double endCapBackZ = zPos + fChamberLength/2. - fChamberWallThickness/2.;
+    G4double endCapFrontZ = zPos - fChamberLength/2. - fChamberWallThickness/2.;
+    G4double endCapBackZ = zPos + fChamberLength/2. + fChamberWallThickness/2.;
     new G4PVPlacement(0, G4ThreeVector(0., 0., endCapFrontZ), logicEndCapFront, "physEndCapFront", worldLV, false, 0, true);
     new G4PVPlacement(0, G4ThreeVector(0., 0., endCapBackZ), logicEndCapBack, "physEndCapBack", worldLV, false, 1, true);
     
-    zPos += fChamberLength/2.;
+    zPos += fChamberLength/2. + fChamberWallThickness;
 }
 
 void DamsaDetectorConstruction::BuildMagnetAndTrackerRegion(G4LogicalVolume* worldLV, G4double& zPos)
