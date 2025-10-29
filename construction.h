@@ -12,8 +12,10 @@
 #include "G4SystemOfUnits.hh"
 #include "G4VisAttributes.hh"
 #include "G4Colour.hh"
-
-#include "detector.h"
+#include "G4SDManager.hh"
+#include "G4MultiFunctionalDetector.hh"
+#include "G4VPrimitiveScorer.hh"
+#include "G4PSEnergyDeposit.hh"
 
 class DamsaDetectorConstruction : public G4VUserDetectorConstruction
 {

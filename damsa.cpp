@@ -39,5 +39,9 @@ int main (int argc, char *argv[])
         UIManager->ApplyCommand(command+fileName);
     }
 
+    delete ui;
+    delete visManager;
+    delete runManager;
+
     return 0;
 }

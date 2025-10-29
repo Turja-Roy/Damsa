@@ -9,35 +9,35 @@
 DamsaDetectorConstruction::DamsaDetectorConstruction()
 : fLogicSiTracker(nullptr), fLogicCrystal(nullptr)
 {
-    fWorldSize = 0.4*m;
+    fWorldSize = 0.4*m; // cubic air box containing entire detector setup
     
-    fTargetX = 5.0*cm;
-    fTargetY = 5.0*cm;
-    fTargetZ = 10.0*cm;
+    fTargetX = 5.0*cm; // tungsten target width (perpendicular to beam)
+    fTargetY = 5.0*cm; // tungsten target height
+    fTargetZ = 10.0*cm; // tungsten target length (along beam axis)
     
-    fChamberInnerRadius = 10.0*cm;
-    fChamberWallThickness = 0.5*cm;
-    fChamberLength = 30.0*cm;
+    fChamberInnerRadius = 10.0*cm; // vacuum chamber inner radius
+    fChamberWallThickness = 0.5*cm; // stainless steel wall thickness
+    fChamberLength = 30.0*cm; // vacuum chamber total length
     
-    fMagnetOuterSize = 20.0*cm;
-    fMagnetHollowSize = 10.0*cm;
+    fMagnetOuterSize = 20.0*cm; // neodymium magnet outer dimension (cube)
+    fMagnetHollowSize = 10.0*cm; // square hollow through magnet center
     
-    fTrackerSizeXY = 10.0*cm;
-    fTrackerThickness = 1.0*cm;
-    fTrackerHoleSize = 2.0*cm;
-    fNumTrackers = 6;
+    fTrackerSizeXY = 10.0*cm; // silicon tracker plane size
+    fTrackerThickness = 1.0*cm; // silicon tracker plane thickness
+    fTrackerHoleSize = 2.0*cm; // square hole for beam passage
+    fNumTrackers = 6; // number of silicon tracker planes
     
-    fCaloSizeXY = 12.0*cm;
-    fLayerThickness = 1.0*cm;
-    fNumCaloLayers = 44;
-    fNumCrystalsPerLayer = 12;
+    fCaloSizeXY = 12.0*cm; // calorimeter transverse dimension
+    fLayerThickness = 1.0*cm; // spacing between crystal layers (z-direction)
+    fNumCaloLayers = 44; // total number of crystal layers (alternating X/Y)
+    fNumCrystalsPerLayer = 12; // number of CsI crystals per layer
 }
 
 DamsaDetectorConstruction::~DamsaDetectorConstruction(){}
 
 void DamsaDetectorConstruction::DefineMaterials()
 {
-    G4NistManager* nist = G4NistManager::Instance();
+    auto* nist = G4NistManager::Instance();
     
     nist->FindOrBuildMaterial("G4_AIR");
     nist->FindOrBuildMaterial("G4_W");
@@ -46,7 +46,7 @@ void DamsaDetectorConstruction::DefineMaterials()
     nist->FindOrBuildMaterial("G4_Si");
     nist->FindOrBuildMaterial("G4_CESIUM_IODIDE");
     
-    G4Material* neodymium = new G4Material("Neodymium", 7.01*g/cm3, 1);
+    auto* neodymium = new G4Material("Neodymium", 7.01*g/cm3, 1);
     neodymium->AddElement(nist->FindOrBuildElement("Nd"), 1);
     
     (void)neodymium;
@@ -54,13 +54,13 @@ void DamsaDetectorConstruction::DefineMaterials()
 
 void DamsaDetectorConstruction::BuildTarget(G4LogicalVolume* worldLV, G4double& zPos)
 {
-    G4NistManager* nist = G4NistManager::Instance();
+    auto* nist = G4NistManager::Instance();
     
     G4double tungstenHalfLength = fTargetZ/2.0;
-    G4Box* solidTungsten = new G4Box("solidTungsten", fTargetX/2.0, fTargetY/2.0, tungstenHalfLength);
-    G4LogicalVolume* logicTungsten = new G4LogicalVolume(solidTungsten, nist->FindOrBuildMaterial("G4_W"), "logicTungsten");
+    auto* solidTungsten = new G4Box("solidTungsten", fTargetX/2.0, fTargetY/2.0, tungstenHalfLength);
+    auto* logicTungsten = new G4LogicalVolume(solidTungsten, nist->FindOrBuildMaterial("G4_W"), "logicTungsten");
     
-    G4VisAttributes* tungstenVis = new G4VisAttributes(G4Colour(0.3, 0.3, 0.3, 1.0));
+    auto* tungstenVis = new G4VisAttributes(G4Colour(0.3, 0.3, 0.3, 1.0));
     tungstenVis->SetForceSolid(true);
     logicTungsten->SetVisAttributes(tungstenVis);
     
@@ -71,35 +71,35 @@ void DamsaDetectorConstruction::BuildTarget(G4LogicalVolume* worldLV, G4double& 
 
 void DamsaDetectorConstruction::BuildVacuumChamber(G4LogicalVolume* worldLV, G4double& zPos)
 {
-    G4NistManager* nist = G4NistManager::Instance();
+    auto* nist = G4NistManager::Instance();
     
     G4double chamberOuterRadius = fChamberInnerRadius + fChamberWallThickness;
     
-    G4Tubs* solidChamberOuter = new G4Tubs("solidChamberOuter", 0., chamberOuterRadius, fChamberLength/2., 0., 360.*deg);
-    G4Tubs* solidChamberInner = new G4Tubs("solidChamberInner", 0., fChamberInnerRadius, fChamberLength/2., 0., 360.*deg);
+    auto* solidChamberOuter = new G4Tubs("solidChamberOuter", 0., chamberOuterRadius, fChamberLength/2., 0., 360.*deg);
+    auto* solidChamberInner = new G4Tubs("solidChamberInner", 0., fChamberInnerRadius, fChamberLength/2., 0., 360.*deg);
     
-    G4SubtractionSolid* solidChamberWall = new G4SubtractionSolid("solidChamberWall", solidChamberOuter, solidChamberInner);
-    G4LogicalVolume* logicChamberWall = new G4LogicalVolume(solidChamberWall, nist->FindOrBuildMaterial("G4_STAINLESS-STEEL"), "logicChamberWall");
+    auto* solidChamberWall = new G4SubtractionSolid("solidChamberWall", solidChamberOuter, solidChamberInner);
+    auto* logicChamberWall = new G4LogicalVolume(solidChamberWall, nist->FindOrBuildMaterial("G4_STAINLESS-STEEL"), "logicChamberWall");
     
-    G4VisAttributes* chamberWallVis = new G4VisAttributes(G4Colour(1.0, 1.0, 0.0, 0.7));
+    auto* chamberWallVis = new G4VisAttributes(G4Colour(1.0, 1.0, 0.0, 0.7));
     chamberWallVis->SetForceSolid(true);
     logicChamberWall->SetVisAttributes(chamberWallVis);
     
     G4double tungstenSize = fTargetX;
     
-    G4Tubs* solidEndCapFull = new G4Tubs("solidEndCapFull", 0., chamberOuterRadius, fChamberWallThickness/2., 0., 360.*deg);
-    G4Box* solidTungstenOpening = new G4Box("solidTungstenOpening", tungstenSize/2., tungstenSize/2., fChamberWallThickness/2.);
-    G4Box* solidMagnetOpening = new G4Box("solidMagnetOpening", fMagnetHollowSize/2., fMagnetHollowSize/2., fChamberWallThickness/2.);
+    auto* solidEndCapFull = new G4Tubs("solidEndCapFull", 0., chamberOuterRadius, fChamberWallThickness/2., 0., 360.*deg);
+    auto* solidTungstenOpening = new G4Box("solidTungstenOpening", tungstenSize/2., tungstenSize/2., fChamberWallThickness/2.);
+    auto* solidMagnetOpening = new G4Box("solidMagnetOpening", fMagnetHollowSize/2., fMagnetHollowSize/2., fChamberWallThickness/2.);
     
-    G4SubtractionSolid* solidEndCapFront = new G4SubtractionSolid("solidEndCapFront", solidEndCapFull, solidTungstenOpening);
-    G4LogicalVolume* logicEndCapFront = new G4LogicalVolume(solidEndCapFront, nist->FindOrBuildMaterial("G4_STAINLESS-STEEL"), "logicEndCapFront");
+    auto* solidEndCapFront = new G4SubtractionSolid("solidEndCapFront", solidEndCapFull, solidTungstenOpening);
+    auto* logicEndCapFront = new G4LogicalVolume(solidEndCapFront, nist->FindOrBuildMaterial("G4_STAINLESS-STEEL"), "logicEndCapFront");
     logicEndCapFront->SetVisAttributes(chamberWallVis);
     
-    G4SubtractionSolid* solidEndCapBack = new G4SubtractionSolid("solidEndCapBack", solidEndCapFull, solidMagnetOpening);
-    G4LogicalVolume* logicEndCapBack = new G4LogicalVolume(solidEndCapBack, nist->FindOrBuildMaterial("G4_STAINLESS-STEEL"), "logicEndCapBack");
+    auto* solidEndCapBack = new G4SubtractionSolid("solidEndCapBack", solidEndCapFull, solidMagnetOpening);
+    auto* logicEndCapBack = new G4LogicalVolume(solidEndCapBack, nist->FindOrBuildMaterial("G4_STAINLESS-STEEL"), "logicEndCapBack");
     logicEndCapBack->SetVisAttributes(chamberWallVis);
     
-    G4LogicalVolume* logicChamberVacuum = new G4LogicalVolume(solidChamberInner, nist->FindOrBuildMaterial("G4_Galactic"), "logicChamberVacuum");
+    auto* logicChamberVacuum = new G4LogicalVolume(solidChamberInner, nist->FindOrBuildMaterial("G4_Galactic"), "logicChamberVacuum");
     logicChamberVacuum->SetVisAttributes(G4VisAttributes::GetInvisible());
     
     zPos += fChamberLength/2.;
@@ -116,12 +116,12 @@ void DamsaDetectorConstruction::BuildVacuumChamber(G4LogicalVolume* worldLV, G4d
 
 void DamsaDetectorConstruction::BuildMagnet(G4LogicalVolume* worldLV, G4double& zPos)
 {
-    G4Box* solidMagnetOuter = new G4Box("solidMagnetOuter", fMagnetOuterSize/2., fMagnetOuterSize/2., fMagnetOuterSize/2.);
-    G4Box* solidMagnetHollow = new G4Box("solidMagnetHollow", fMagnetHollowSize/2., fMagnetHollowSize/2., fMagnetOuterSize/2.);
-    G4SubtractionSolid* solidMagnet = new G4SubtractionSolid("solidMagnet", solidMagnetOuter, solidMagnetHollow);
-    G4LogicalVolume* logicMagnet = new G4LogicalVolume(solidMagnet, G4Material::GetMaterial("Neodymium"), "logicMagnet");
+    auto* solidMagnetOuter = new G4Box("solidMagnetOuter", fMagnetOuterSize/2., fMagnetOuterSize/2., fMagnetOuterSize/2.);
+    auto* solidMagnetHollow = new G4Box("solidMagnetHollow", fMagnetHollowSize/2., fMagnetHollowSize/2., fMagnetOuterSize/2.);
+    auto* solidMagnet = new G4SubtractionSolid("solidMagnet", solidMagnetOuter, solidMagnetHollow);
+    auto* logicMagnet = new G4LogicalVolume(solidMagnet, G4Material::GetMaterial("Neodymium"), "logicMagnet");
     
-    G4VisAttributes* magnetVis = new G4VisAttributes(G4Colour(0.5, 0.5, 0.5, 0.3));
+    auto* magnetVis = new G4VisAttributes(G4Colour(0.5, 0.5, 0.5, 0.3));
     magnetVis->SetForceSolid(true);
     logicMagnet->SetVisAttributes(magnetVis);
     
@@ -131,25 +131,30 @@ void DamsaDetectorConstruction::BuildMagnet(G4LogicalVolume* worldLV, G4double& 
 
 void DamsaDetectorConstruction::BuildTrackerRegion(G4LogicalVolume* worldLV, G4double& zPos)
 {
-    G4NistManager* nist = G4NistManager::Instance();
+    auto* nist = G4NistManager::Instance();
     
-    G4double magnetStartZ = zPos - fMagnetOuterSize/2.;
+    auto* solidMagnetHollow = new G4Box("solidMagnetHollow_Tracker", fMagnetHollowSize/2., fMagnetHollowSize/2., fMagnetOuterSize/2.);
+    auto* logicMagnetHollow = new G4LogicalVolume(solidMagnetHollow, nist->FindOrBuildMaterial("G4_AIR"), "logicMagnetHollow");
+    logicMagnetHollow->SetVisAttributes(G4VisAttributes::GetInvisible());
+    
+    G4double magnetZ = zPos;
+    new G4PVPlacement(0, G4ThreeVector(0., 0., magnetZ), logicMagnetHollow, "physMagnetHollow", worldLV, false, 0, true);
+    
     G4double availableSpace = fMagnetOuterSize - fNumTrackers * fTrackerThickness;
     G4double trackerSpacing = availableSpace / (fNumTrackers - 1);
     
-    G4Box* solidSiTrackerFull = new G4Box("solidSiTrackerFull", fTrackerSizeXY/2., fTrackerSizeXY/2., fTrackerThickness/2.);
-    G4Box* solidTrackerHole = new G4Box("solidTrackerHole", fTrackerHoleSize/2., fTrackerHoleSize/2., fTrackerThickness/2.);
-    G4SubtractionSolid* solidSiTracker = new G4SubtractionSolid("solidSiTracker", solidSiTrackerFull, solidTrackerHole);
+    auto* solidSiTrackerFull = new G4Box("solidSiTrackerFull", fTrackerSizeXY/2., fTrackerSizeXY/2., fTrackerThickness/2.);
+    auto* solidTrackerHole = new G4Box("solidTrackerHole", fTrackerHoleSize/2., fTrackerHoleSize/2., fTrackerThickness/2.);
+    auto* solidSiTracker = new G4SubtractionSolid("solidSiTracker", solidSiTrackerFull, solidTrackerHole);
     fLogicSiTracker = new G4LogicalVolume(solidSiTracker, nist->FindOrBuildMaterial("G4_Si"), "logicSiTracker");
     
-    G4VisAttributes* trackerVis = new G4VisAttributes(G4Colour(0.0, 1.0, 1.0, 0.8));
+    auto* trackerVis = new G4VisAttributes(G4Colour(0.0, 1.0, 1.0, 0.8));
     trackerVis->SetForceSolid(true);
     fLogicSiTracker->SetVisAttributes(trackerVis);
     
-    G4double trackerStartZ = magnetStartZ + fTrackerThickness/2.;
     for (G4int i = 0; i < fNumTrackers; i++) {
-        G4double trackerZ = trackerStartZ + i * (fTrackerThickness + trackerSpacing);
-        new G4PVPlacement(0, G4ThreeVector(0., 0., trackerZ), fLogicSiTracker, "physSiTracker", worldLV, false, i, true);
+        G4double localZ = -fMagnetOuterSize/2. + fTrackerThickness/2. + i * (fTrackerThickness + trackerSpacing);
+        new G4PVPlacement(0, G4ThreeVector(0., 0., localZ), fLogicSiTracker, "physSiTracker", logicMagnetHollow, false, i, true);
     }
     
     zPos += fMagnetOuterSize/2.;
@@ -157,20 +162,23 @@ void DamsaDetectorConstruction::BuildTrackerRegion(G4LogicalVolume* worldLV, G4d
 
 void DamsaDetectorConstruction::BuildCalorimeter(G4LogicalVolume* worldLV, G4double& zPos)
 {
-    G4Material* csi = G4Material::GetMaterial("G4_CESIUM_IODIDE");
+    auto* csi = G4Material::GetMaterial("G4_CESIUM_IODIDE");
+    auto* air = G4Material::GetMaterial("G4_AIR");
     
-    G4Box* solidCrystal = new G4Box("solidCrystal", 6.0*cm, 0.5*cm, 0.5*cm);
+    G4double ecalDepth = fNumCaloLayers * fLayerThickness;
+    auto* solidECAL = new G4Box("solidECAL", fCaloSizeXY/2., fCaloSizeXY/2., ecalDepth/2.);
+    auto* logicECAL = new G4LogicalVolume(solidECAL, air, "logicECAL");
+    logicECAL->SetVisAttributes(G4VisAttributes::GetInvisible());
     
+    auto* solidCrystal = new G4Box("solidCrystal", 6.0*cm, 0.5*cm, 0.5*cm);
     fLogicCrystal = new G4LogicalVolume(solidCrystal, csi, "logicCrystal");
     
-    G4VisAttributes* caloVis = new G4VisAttributes(G4Colour(1.0, 0.0, 1.0, 0.5));
+    auto* caloVis = new G4VisAttributes(G4Colour(1.0, 0.0, 1.0, 0.5));
     caloVis->SetForceSolid(true);
     fLogicCrystal->SetVisAttributes(caloVis);
     
-    G4double caloStartZ = zPos + fLayerThickness/2.;
-    
     for(G4int layer = 0; layer < fNumCaloLayers; layer++) {
-        G4double layerZ = caloStartZ + layer * fLayerThickness;
+        G4double localZ = -ecalDepth/2. + fLayerThickness/2. + layer * fLayerThickness;
         G4bool isXOriented = (layer % 2 == 0);
         
         G4RotationMatrix* rot = nullptr;
@@ -184,29 +192,32 @@ void DamsaDetectorConstruction::BuildCalorimeter(G4LogicalVolume* worldLV, G4dou
             G4ThreeVector position;
             
             if(isXOriented) {
-                position = G4ThreeVector(0., offset, layerZ);
+                position = G4ThreeVector(0., offset, localZ);
             } else {
-                position = G4ThreeVector(offset, 0., layerZ);
+                position = G4ThreeVector(offset, 0., localZ);
             }
             
             G4int copyNo = layer * fNumCrystalsPerLayer + crystal;
-            new G4PVPlacement(rot, position, fLogicCrystal, "physCalorimeter", worldLV, false, copyNo, true);
+            new G4PVPlacement(rot, position, fLogicCrystal, "physCalorimeter", logicECAL, false, copyNo, true);
         }
     }
     
-    zPos = caloStartZ + fNumCaloLayers * fLayerThickness - fLayerThickness/2.;
+    zPos += ecalDepth/2.;
+    new G4PVPlacement(0, G4ThreeVector(0., 0., zPos), logicECAL, "physECAL", worldLV, false, 0, true);
+    zPos += ecalDepth/2.;
 }
 
 G4VPhysicalVolume* DamsaDetectorConstruction::Construct()
 {
     DefineMaterials();
     
-    G4NistManager* nist = G4NistManager::Instance();
+    auto* nist = G4NistManager::Instance();
     
-    G4Material* worldMat = nist->FindOrBuildMaterial("G4_AIR");
-    G4Box* solidWorld = new G4Box("solidWorld", 0.2*m, 0.2*m, 0.6*m);
-    G4LogicalVolume* logicWorld = new G4LogicalVolume(solidWorld, worldMat, "logicWorld");
-    G4VPhysicalVolume* physWorld = new G4PVPlacement(0, G4ThreeVector(0., 0., 0.), logicWorld, "physWorld", 0, false, 0, true);
+    auto* worldMat = nist->FindOrBuildMaterial("G4_AIR");
+    auto* solidWorld = new G4Box("solidWorld", 0.2*m, 0.2*m, 0.6*m);
+    auto* logicWorld = new G4LogicalVolume(solidWorld, worldMat, "logicWorld");
+    // logicWorld->SetVisAttributes(G4VisAttributes::GetInvisible());
+    auto* physWorld = new G4PVPlacement(0, G4ThreeVector(0., 0., 0.), logicWorld, "physWorld", 0, false, 0, true);
     
     G4double zPos = -50.*cm;
     
@@ -221,6 +232,13 @@ G4VPhysicalVolume* DamsaDetectorConstruction::Construct()
 
 void DamsaDetectorConstruction::ConstructSDandField()
 {
-    DamsaSensitiveDetector* sensDet = new DamsaSensitiveDetector("SensitiveDetector");
-    fLogicSiTracker->SetSensitiveDetector(sensDet);
+    auto* sdManager = G4SDManager::GetSDMpointer();
+    
+    auto* trackerSD = new G4MultiFunctionalDetector("TrackerSD");
+    sdManager->AddNewDetector(trackerSD);
+    
+    auto* energyDep = new G4PSEnergyDeposit("EnergyDeposit");
+    trackerSD->RegisterPrimitive(energyDep);
+    
+    fLogicSiTracker->SetSensitiveDetector(trackerSD);
 }
