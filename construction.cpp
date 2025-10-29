@@ -5,9 +5,10 @@
 #include "G4VisAttributes.hh"
 #include "G4Colour.hh"
 #include "G4RotationMatrix.hh"
+#include "MagneticField.h"
 
 DamsaDetectorConstruction::DamsaDetectorConstruction()
-: fLogicSiTracker(nullptr), fLogicCrystal(nullptr)
+: fLogicSiTracker(nullptr), fLogicCrystal(nullptr), fLogicMagnetHollow(nullptr), fMagField(nullptr)
 {
     fWorldSize = 0.4*m; // cubic air box containing entire detector setup
     
@@ -34,6 +35,28 @@ DamsaDetectorConstruction::DamsaDetectorConstruction()
 }
 
 DamsaDetectorConstruction::~DamsaDetectorConstruction(){}
+
+G4VPhysicalVolume* DamsaDetectorConstruction::Construct()
+{
+    DefineMaterials();
+    
+    auto* nist = G4NistManager::Instance();
+    
+    auto* worldMat = nist->FindOrBuildMaterial("G4_AIR");
+    auto* solidWorld = new G4Box("solidWorld", 0.2*m, 0.2*m, 0.6*m);
+    auto* logicWorld = new G4LogicalVolume(solidWorld, worldMat, "logicWorld");
+    // logicWorld->SetVisAttributes(G4VisAttributes::GetInvisible());
+    auto* physWorld = new G4PVPlacement(0, G4ThreeVector(0., 0., 0.), logicWorld, "physWorld", 0, false, 0, true);
+    
+    G4double zPos = -50.*cm;
+    
+    BuildTarget(logicWorld, zPos);
+    BuildVacuumChamber(logicWorld, zPos);
+    BuildMagnetAndTrackerRegion(logicWorld, zPos);
+    BuildCalorimeter(logicWorld, zPos);
+    
+    return physWorld;
+}
 
 void DamsaDetectorConstruction::DefineMaterials()
 {
@@ -114,8 +137,10 @@ void DamsaDetectorConstruction::BuildVacuumChamber(G4LogicalVolume* worldLV, G4d
     zPos += fChamberLength/2.;
 }
 
-void DamsaDetectorConstruction::BuildMagnet(G4LogicalVolume* worldLV, G4double& zPos)
+void DamsaDetectorConstruction::BuildMagnetAndTrackerRegion(G4LogicalVolume* worldLV, G4double& zPos)
 {
+    auto* nist = G4NistManager::Instance();
+    
     auto* solidMagnetOuter = new G4Box("solidMagnetOuter", fMagnetOuterSize/2., fMagnetOuterSize/2., fMagnetOuterSize/2.);
     auto* solidMagnetHollow = new G4Box("solidMagnetHollow", fMagnetHollowSize/2., fMagnetHollowSize/2., fMagnetOuterSize/2.);
     auto* solidMagnet = new G4SubtractionSolid("solidMagnet", solidMagnetOuter, solidMagnetHollow);
@@ -125,20 +150,12 @@ void DamsaDetectorConstruction::BuildMagnet(G4LogicalVolume* worldLV, G4double& 
     magnetVis->SetForceSolid(true);
     logicMagnet->SetVisAttributes(magnetVis);
     
+    fLogicMagnetHollow = new G4LogicalVolume(solidMagnetHollow, nist->FindOrBuildMaterial("G4_AIR"), "logicMagnetHollow");
+    fLogicMagnetHollow->SetVisAttributes(G4VisAttributes::GetInvisible());
+    
     zPos += fMagnetOuterSize/2.;
     new G4PVPlacement(0, G4ThreeVector(0., 0., zPos), logicMagnet, "physMagnet", worldLV, false, 0, true);
-}
-
-void DamsaDetectorConstruction::BuildTrackerRegion(G4LogicalVolume* worldLV, G4double& zPos)
-{
-    auto* nist = G4NistManager::Instance();
-    
-    auto* solidMagnetHollow = new G4Box("solidMagnetHollow_Tracker", fMagnetHollowSize/2., fMagnetHollowSize/2., fMagnetOuterSize/2.);
-    auto* logicMagnetHollow = new G4LogicalVolume(solidMagnetHollow, nist->FindOrBuildMaterial("G4_AIR"), "logicMagnetHollow");
-    logicMagnetHollow->SetVisAttributes(G4VisAttributes::GetInvisible());
-    
-    G4double magnetZ = zPos;
-    new G4PVPlacement(0, G4ThreeVector(0., 0., magnetZ), logicMagnetHollow, "physMagnetHollow", worldLV, false, 0, true);
+    new G4PVPlacement(0, G4ThreeVector(0., 0., zPos), fLogicMagnetHollow, "physMagnetHollow", worldLV, false, 0, true);
     
     G4double availableSpace = fMagnetOuterSize - fNumTrackers * fTrackerThickness;
     G4double trackerSpacing = availableSpace / (fNumTrackers - 1);
@@ -154,7 +171,7 @@ void DamsaDetectorConstruction::BuildTrackerRegion(G4LogicalVolume* worldLV, G4d
     
     for (G4int i = 0; i < fNumTrackers; i++) {
         G4double localZ = -fMagnetOuterSize/2. + fTrackerThickness/2. + i * (fTrackerThickness + trackerSpacing);
-        new G4PVPlacement(0, G4ThreeVector(0., 0., localZ), fLogicSiTracker, "physSiTracker", logicMagnetHollow, false, i, true);
+        new G4PVPlacement(0, G4ThreeVector(0., 0., localZ), fLogicSiTracker, "physSiTracker", fLogicMagnetHollow, false, i, true);
     }
     
     zPos += fMagnetOuterSize/2.;
@@ -207,29 +224,6 @@ void DamsaDetectorConstruction::BuildCalorimeter(G4LogicalVolume* worldLV, G4dou
     zPos += ecalDepth/2.;
 }
 
-G4VPhysicalVolume* DamsaDetectorConstruction::Construct()
-{
-    DefineMaterials();
-    
-    auto* nist = G4NistManager::Instance();
-    
-    auto* worldMat = nist->FindOrBuildMaterial("G4_AIR");
-    auto* solidWorld = new G4Box("solidWorld", 0.2*m, 0.2*m, 0.6*m);
-    auto* logicWorld = new G4LogicalVolume(solidWorld, worldMat, "logicWorld");
-    // logicWorld->SetVisAttributes(G4VisAttributes::GetInvisible());
-    auto* physWorld = new G4PVPlacement(0, G4ThreeVector(0., 0., 0.), logicWorld, "physWorld", 0, false, 0, true);
-    
-    G4double zPos = -50.*cm;
-    
-    BuildTarget(logicWorld, zPos);
-    BuildVacuumChamber(logicWorld, zPos);
-    BuildMagnet(logicWorld, zPos);
-    BuildTrackerRegion(logicWorld, zPos);
-    BuildCalorimeter(logicWorld, zPos);
-    
-    return physWorld;
-}
-
 void DamsaDetectorConstruction::ConstructSDandField()
 {
     auto* sdManager = G4SDManager::GetSDMpointer();
@@ -240,5 +234,25 @@ void DamsaDetectorConstruction::ConstructSDandField()
     auto* energyDep = new G4PSEnergyDeposit("EnergyDeposit");
     trackerSD->RegisterPrimitive(energyDep);
     
+    auto* nofSecondary = new G4PSNofSecondary("NofSecondary");
+    trackerSD->RegisterPrimitive(nofSecondary);
+    
     fLogicSiTracker->SetSensitiveDetector(trackerSD);
+    
+    auto* calorimeterSD = new G4MultiFunctionalDetector("CalorimeterSD");
+    sdManager->AddNewDetector(calorimeterSD);
+    
+    auto* caloEnergyDep = new G4PSEnergyDeposit("EnergyDeposit");
+    calorimeterSD->RegisterPrimitive(caloEnergyDep);
+    
+    auto* caloNofSecondary = new G4PSNofSecondary("NofSecondary");
+    calorimeterSD->RegisterPrimitive(caloNofSecondary);
+    
+    fLogicCrystal->SetSensitiveDetector(calorimeterSD);
+    
+    fMagField = new MagneticField();
+    auto* fieldMgr = new G4FieldManager();
+    fieldMgr->SetDetectorField(fMagField);
+    fieldMgr->CreateChordFinder(fMagField);
+    fLogicMagnetHollow->SetFieldManager(fieldMgr, true);
 }

@@ -16,6 +16,11 @@
 #include "G4MultiFunctionalDetector.hh"
 #include "G4VPrimitiveScorer.hh"
 #include "G4PSEnergyDeposit.hh"
+#include "G4PSNofSecondary.hh"
+#include "G4MagneticField.hh"
+#include "G4FieldManager.hh"
+#include "G4TransportationManager.hh"
+#include "G4ChordFinder.hh"
 
 class DamsaDetectorConstruction : public G4VUserDetectorConstruction
 {
@@ -31,8 +36,7 @@ private:
     void DefineMaterials();
     void BuildTarget(G4LogicalVolume* worldLV, G4double& zPos);
     void BuildVacuumChamber(G4LogicalVolume* worldLV, G4double& zPos);
-    void BuildMagnet(G4LogicalVolume* worldLV, G4double& zPos);
-    void BuildTrackerRegion(G4LogicalVolume* worldLV, G4double& zPos);
+    void BuildMagnetAndTrackerRegion(G4LogicalVolume* worldLV, G4double& zPos);
     void BuildCalorimeter(G4LogicalVolume* worldLV, G4double& zPos);
 
     G4double fWorldSize;
@@ -46,6 +50,8 @@ private:
 
     G4LogicalVolume* fLogicSiTracker;
     G4LogicalVolume* fLogicCrystal;
+    G4LogicalVolume* fLogicMagnetHollow;
+    G4MagneticField* fMagField;
 };
 
 #endif

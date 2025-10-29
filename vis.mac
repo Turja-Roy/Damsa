@@ -5,5 +5,6 @@
 /vis/scene/add/trajectories smooth
 /vis/scene/add/axes 0 0 0 10 cm
 /vis/scene/add/scale 10 cm
+/vis/scene/add/magneticField 50
 /vis/scene/add/eventID
 /vis/scene/endOfEventAction accumulate
