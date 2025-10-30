@@ -146,21 +146,24 @@ void DamsaDetectorConstruction::BuildMagnetAndTrackerRegion(G4LogicalVolume* wor
     auto* solidMagnet = new G4SubtractionSolid("solidMagnet", solidMagnetOuter, solidMagnetHollow);
     auto* logicMagnet = new G4LogicalVolume(solidMagnet, G4Material::GetMaterial("Neodymium"), "logicMagnet");
     
+    auto* solidMagnetHollowDaughter = new G4Box("solidMagnetHollowDaughter", fMagnetHollowSize/2. - 0.01*mm, fMagnetHollowSize/2. - 0.01*mm, fMagnetOuterSize/2. - 0.01*mm);
+    
     auto* magnetVis = new G4VisAttributes(G4Colour(0.5, 0.5, 0.5, 0.3));
     magnetVis->SetForceSolid(true);
     logicMagnet->SetVisAttributes(magnetVis);
     
-    fLogicMagnetHollow = new G4LogicalVolume(solidMagnetHollow, nist->FindOrBuildMaterial("G4_AIR"), "logicMagnetHollow");
+    fLogicMagnetHollow = new G4LogicalVolume(solidMagnetHollowDaughter, nist->FindOrBuildMaterial("G4_AIR"), "logicMagnetHollow");
     fLogicMagnetHollow->SetVisAttributes(G4VisAttributes::GetInvisible());
     
     zPos += fMagnetOuterSize/2.;
     new G4PVPlacement(0, G4ThreeVector(0., 0., zPos), logicMagnet, "physMagnet", worldLV, false, 0, true);
-    new G4PVPlacement(0, G4ThreeVector(0., 0., zPos), fLogicMagnetHollow, "physMagnetHollow", worldLV, false, 0, true);
+    new G4PVPlacement(0, G4ThreeVector(0., 0., 0.), fLogicMagnetHollow, "physMagnetHollow", logicMagnet, false, 0, true);
     
     G4double availableSpace = fMagnetOuterSize - fNumTrackers * fTrackerThickness;
     G4double trackerSpacing = availableSpace / (fNumTrackers - 1);
     
-    auto* solidSiTrackerFull = new G4Box("solidSiTrackerFull", fTrackerSizeXY/2., fTrackerSizeXY/2., fTrackerThickness/2.);
+    G4double trackerFitSize = fTrackerSizeXY - 0.1*mm;
+    auto* solidSiTrackerFull = new G4Box("solidSiTrackerFull", trackerFitSize/2., trackerFitSize/2., fTrackerThickness/2.);
     auto* solidTrackerHole = new G4Box("solidTrackerHole", fTrackerHoleSize/2., fTrackerHoleSize/2., fTrackerThickness/2.);
     auto* solidSiTracker = new G4SubtractionSolid("solidSiTracker", solidSiTrackerFull, solidTrackerHole);
     fLogicSiTracker = new G4LogicalVolume(solidSiTracker, nist->FindOrBuildMaterial("G4_Si"), "logicSiTracker");
