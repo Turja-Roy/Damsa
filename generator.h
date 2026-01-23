@@ -26,7 +26,6 @@ DamsaPrimaryGenerator::DamsaPrimaryGenerator () {
     fParticleGun = new G4ParticleGun(1);
 
     G4ParticleTable* particleTable = G4ParticleTable::GetParticleTable();
-    // G4String particleName = "proton";
     G4String particleName = "e-";
     G4ParticleDefinition* particle = particleTable->FindParticle(particleName);
 
@@ -35,10 +34,10 @@ DamsaPrimaryGenerator::DamsaPrimaryGenerator () {
 
     fParticleGun->SetParticlePosition(pos);
     fParticleGun->SetParticleMomentumDirection(mom);
-    fParticleGun->SetParticleMomentum(8.*GeV);
+    fParticleGun->SetParticleEnergy(8.*GeV);
     fParticleGun->SetParticleDefinition(particle);
     
-    fCurrentEnergy = 100.*MeV;
+    fCurrentEnergy = 8.*GeV;
 }
 DamsaPrimaryGenerator::~DamsaPrimaryGenerator () {
     delete fParticleGun;
@@ -50,7 +49,7 @@ void DamsaPrimaryGenerator::GeneratePrimaries(G4Event* anEvent) {
 
 void DamsaPrimaryGenerator::SetBeamEnergy(G4double energy) {
     fCurrentEnergy = energy;
-    fParticleGun->SetParticleMomentum(energy);
+    fParticleGun->SetParticleEnergy(energy);
     G4cout << "Beam energy set to: " << energy/MeV << " MeV" << G4endl;
 }
 
