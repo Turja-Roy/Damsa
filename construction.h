@@ -31,7 +31,7 @@ public:
     virtual G4VPhysicalVolume* Construct() override;
 
 private:
-    virtual void ConstructSDandField();
+    // virtual void ConstructSDandField();
     
     void DefineMaterials();
     void BuildTarget(G4LogicalVolume* worldLV, G4double& zPos);

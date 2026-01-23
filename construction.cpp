@@ -24,7 +24,7 @@ DamsaDetectorConstruction::DamsaDetectorConstruction()
     fMagnetHollowSize = 10.0*cm; // square hollow through magnet center
     
     fTrackerSizeXY = 10.0*cm; // silicon tracker plane size
-    fTrackerThickness = 1.0*cm; // silicon tracker plane thickness
+    fTrackerThickness = 0.2*cm; // silicon tracker plane thickness
     fTrackerHoleSize = 2.0*cm; // square hole for beam passage
     fNumTrackers = 6; // number of silicon tracker planes
     
@@ -170,7 +170,8 @@ void DamsaDetectorConstruction::BuildMagnetAndTrackerRegion(G4LogicalVolume* wor
     new G4PVPlacement(0, G4ThreeVector(0., 0., 0.), fLogicMagnetHollow, "physMagnetHollow", logicMagnet, false, 0, true);
     
     // Detector entrance scoring volume (inside magnet hollow, before first tracker)
-    auto* solidScoringDetector = new G4Box("solidScoringDetector", 15.*cm, 15.*cm, 0.1*mm);
+    // auto* solidScoringDetector = new G4Box("solidScoringDetector", 15.*cm, 15.*cm, 0.1*mm);
+    auto* solidScoringDetector = new G4Box("solidScoringDetector", 4.45*cm, 4.45*cm, 0.1*mm);
     auto* logicScoringDetector = new G4LogicalVolume(solidScoringDetector,
                                                       nist->FindOrBuildMaterial("G4_Galactic"),
                                                       "logicScoringDetector");
@@ -249,35 +250,35 @@ void DamsaDetectorConstruction::BuildCalorimeter(G4LogicalVolume* worldLV, G4dou
     zPos += ecalDepth/2.;
 }
 
-void DamsaDetectorConstruction::ConstructSDandField()
-{
-    auto* sdManager = G4SDManager::GetSDMpointer();
-    
-    auto* trackerSD = new G4MultiFunctionalDetector("TrackerSD");
-    sdManager->AddNewDetector(trackerSD);
-    
-    auto* energyDep = new G4PSEnergyDeposit("EnergyDeposit");
-    trackerSD->RegisterPrimitive(energyDep);
-    
-    auto* nofSecondary = new G4PSNofSecondary("NofSecondary");
-    trackerSD->RegisterPrimitive(nofSecondary);
-    
-    fLogicSiTracker->SetSensitiveDetector(trackerSD);
-    
-    auto* calorimeterSD = new G4MultiFunctionalDetector("CalorimeterSD");
-    sdManager->AddNewDetector(calorimeterSD);
-    
-    auto* caloEnergyDep = new G4PSEnergyDeposit("EnergyDeposit");
-    calorimeterSD->RegisterPrimitive(caloEnergyDep);
-    
-    auto* caloNofSecondary = new G4PSNofSecondary("NofSecondary");
-    calorimeterSD->RegisterPrimitive(caloNofSecondary);
-    
-    fLogicCrystal->SetSensitiveDetector(calorimeterSD);
-    
-    fMagField = new MagneticField();
-    auto* fieldMgr = new G4FieldManager();
-    fieldMgr->SetDetectorField(fMagField);
-    fieldMgr->CreateChordFinder(fMagField);
-    fLogicMagnetHollow->SetFieldManager(fieldMgr, true);
-}
+// void DamsaDetectorConstruction::ConstructSDandField()
+// {
+//     auto* sdManager = G4SDManager::GetSDMpointer();
+//     
+//     auto* trackerSD = new G4MultiFunctionalDetector("TrackerSD");
+//     sdManager->AddNewDetector(trackerSD);
+//     
+//     auto* energyDep = new G4PSEnergyDeposit("EnergyDeposit");
+//     trackerSD->RegisterPrimitive(energyDep);
+//     
+//     auto* nofSecondary = new G4PSNofSecondary("NofSecondary");
+//     trackerSD->RegisterPrimitive(nofSecondary);
+//     
+//     fLogicSiTracker->SetSensitiveDetector(trackerSD);
+//     
+//     auto* calorimeterSD = new G4MultiFunctionalDetector("CalorimeterSD");
+//     sdManager->AddNewDetector(calorimeterSD);
+//     
+//     auto* caloEnergyDep = new G4PSEnergyDeposit("EnergyDeposit");
+//     calorimeterSD->RegisterPrimitive(caloEnergyDep);
+//     
+//     auto* caloNofSecondary = new G4PSNofSecondary("NofSecondary");
+//     calorimeterSD->RegisterPrimitive(caloNofSecondary);
+//     
+//     fLogicCrystal->SetSensitiveDetector(calorimeterSD);
+//     
+//     fMagField = new MagneticField();
+//     auto* fieldMgr = new G4FieldManager();
+//     fieldMgr->SetDetectorField(fMagField);
+//     fieldMgr->CreateChordFinder(fMagField);
+//     fLogicMagnetHollow->SetFieldManager(fieldMgr, true);
+// }

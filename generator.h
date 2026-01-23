@@ -26,7 +26,7 @@ DamsaPrimaryGenerator::DamsaPrimaryGenerator () {
     fParticleGun = new G4ParticleGun(1);
 
     G4ParticleTable* particleTable = G4ParticleTable::GetParticleTable();
-    G4String particleName = "e-";
+    G4String particleName = "proton";
     G4ParticleDefinition* particle = particleTable->FindParticle(particleName);
 
     G4ThreeVector pos(0., 0., -60.*cm);
