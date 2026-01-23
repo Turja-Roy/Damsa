@@ -6,6 +6,7 @@
 #include "G4OpticalPhysics.hh"
 #include "G4DecayPhysics.hh"
 #include "G4HadronPhysicsFTFP_BERT.hh"
+#include "QBBC.hh"
 
 class DamsaPhysicsList : public G4VModularPhysicsList {
 public:
@@ -18,6 +19,7 @@ DamsaPhysicsList::DamsaPhysicsList() {
     RegisterPhysics (new G4OpticalPhysics());
     RegisterPhysics (new G4DecayPhysics());
     RegisterPhysics (new G4HadronPhysicsFTFP_BERT());
+    // RegisterPhysics (new QBBC());
 }
 
 DamsaPhysicsList::~DamsaPhysicsList() {}

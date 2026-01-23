@@ -10,6 +10,8 @@ execute_process(COMMAND root-config --cflags OUTPUT_VARIABLE ROOT_CXX_FLAGS OUTP
 execute_process(COMMAND root-config --libs OUTPUT_VARIABLE ROOT_LIBRARIES OUTPUT_STRIP_TRAILING_WHITESPACE)
 
 file(GLOB sources ${PROJECT_SOURCE_DIR}/*.cpp)
+list(REMOVE_ITEM sources ${PROJECT_SOURCE_DIR}/damsa.cpp)
+list(REMOVE_ITEM sources ${PROJECT_SOURCE_DIR}/damsa_energy_scan.cpp)
 file(GLOB headers ${PROJECT_SOURCE_DIR}/*.h)
 
 file(GLOB MACRO_FILES
@@ -22,4 +24,8 @@ add_executable(damsa damsa.cpp ${sources} ${headers})
 set_target_properties(damsa PROPERTIES COMPILE_FLAGS "${ROOT_CXX_FLAGS}")
 target_link_libraries(damsa ${Geant4_LIBRARIES} ${ROOT_LIBRARIES})
 
-add_custom_target(Damsa DEPENDS damsa)
+add_executable(damsa_energy_scan damsa_energy_scan.cpp ${sources} ${headers})
+set_target_properties(damsa_energy_scan PROPERTIES COMPILE_FLAGS "${ROOT_CXX_FLAGS}")
+target_link_libraries(damsa_energy_scan ${Geant4_LIBRARIES} ${ROOT_LIBRARIES})
+
+add_custom_target(Damsa DEPENDS damsa damsa_energy_scan)

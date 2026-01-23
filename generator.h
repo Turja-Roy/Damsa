@@ -13,9 +13,13 @@ public:
     virtual ~DamsaPrimaryGenerator();
 
     virtual void GeneratePrimaries(G4Event*);
+    
+    void SetBeamEnergy(G4double energy);
+    G4double GetBeamEnergy() const { return fCurrentEnergy; }
 
 private:
     G4ParticleGun* fParticleGun;
+    G4double fCurrentEnergy;
 };
 
 DamsaPrimaryGenerator::DamsaPrimaryGenerator () {
@@ -31,8 +35,10 @@ DamsaPrimaryGenerator::DamsaPrimaryGenerator () {
 
     fParticleGun->SetParticlePosition(pos);
     fParticleGun->SetParticleMomentumDirection(mom);
-    fParticleGun->SetParticleMomentum(100.*MeV);
+    fParticleGun->SetParticleMomentum(8.*GeV);
     fParticleGun->SetParticleDefinition(particle);
+    
+    fCurrentEnergy = 100.*MeV;
 }
 DamsaPrimaryGenerator::~DamsaPrimaryGenerator () {
     delete fParticleGun;
@@ -40,6 +46,12 @@ DamsaPrimaryGenerator::~DamsaPrimaryGenerator () {
 
 void DamsaPrimaryGenerator::GeneratePrimaries(G4Event* anEvent) {
     fParticleGun->GeneratePrimaryVertex(anEvent);
+}
+
+void DamsaPrimaryGenerator::SetBeamEnergy(G4double energy) {
+    fCurrentEnergy = energy;
+    fParticleGun->SetParticleMomentum(energy);
+    G4cout << "Beam energy set to: " << energy/MeV << " MeV" << G4endl;
 }
 
 #endif

@@ -6,6 +6,7 @@
 #include "generator.h"
 #include "run.h"
 #include "event.h"
+#include "stepping.h"
 
 class DamsaActionInitialization : public G4VUserActionInitialization {
 public:
@@ -27,6 +28,9 @@ void DamsaActionInitialization::Build () const {
 
     DamsaEventAction* eventAction = new DamsaEventAction();
     SetUserAction(eventAction);
+    
+    DamsaSteppingAction* steppingAction = new DamsaSteppingAction();
+    SetUserAction(steppingAction);
 }
 
 #endif

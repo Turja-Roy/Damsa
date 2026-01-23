@@ -90,6 +90,16 @@ void DamsaDetectorConstruction::BuildTarget(G4LogicalVolume* worldLV, G4double& 
     zPos += tungstenHalfLength;
     new G4PVPlacement(0, G4ThreeVector(0., 0., zPos), logicTungsten, "physTungsten", worldLV, false, 0, true);
     zPos += tungstenHalfLength;
+    
+    // Target exit scoring volume
+    auto* solidScoringTarget = new G4Box("solidScoringTarget", 15.*cm, 15.*cm, 0.1*mm);
+    auto* logicScoringTarget = new G4LogicalVolume(solidScoringTarget, 
+                                                    nist->FindOrBuildMaterial("G4_Galactic"), 
+                                                    "logicScoringTarget");
+    logicScoringTarget->SetVisAttributes(G4VisAttributes::GetInvisible());
+    
+    new G4PVPlacement(0, G4ThreeVector(0., 0., zPos + 0.1*mm), 
+                     logicScoringTarget, "physScoringVolumeTarget", worldLV, false, 0, true);
 }
 
 void DamsaDetectorConstruction::BuildVacuumChamber(G4LogicalVolume* worldLV, G4double& zPos)
@@ -158,6 +168,18 @@ void DamsaDetectorConstruction::BuildMagnetAndTrackerRegion(G4LogicalVolume* wor
     zPos += fMagnetOuterSize/2.;
     new G4PVPlacement(0, G4ThreeVector(0., 0., zPos), logicMagnet, "physMagnet", worldLV, false, 0, true);
     new G4PVPlacement(0, G4ThreeVector(0., 0., 0.), fLogicMagnetHollow, "physMagnetHollow", logicMagnet, false, 0, true);
+    
+    // Detector entrance scoring volume (inside magnet hollow, before first tracker)
+    auto* solidScoringDetector = new G4Box("solidScoringDetector", 15.*cm, 15.*cm, 0.1*mm);
+    auto* logicScoringDetector = new G4LogicalVolume(solidScoringDetector,
+                                                      nist->FindOrBuildMaterial("G4_Galactic"),
+                                                      "logicScoringDetector");
+    logicScoringDetector->SetVisAttributes(G4VisAttributes::GetInvisible());
+    
+    G4double scoringZ = -fMagnetOuterSize/2. + 0.5*mm;
+    new G4PVPlacement(0, G4ThreeVector(0., 0., scoringZ),
+                     logicScoringDetector, "physScoringVolumeDetector", 
+                     fLogicMagnetHollow, false, 0, true);
     
     G4double availableSpace = fMagnetOuterSize - fNumTrackers * fTrackerThickness;
     G4double trackerSpacing = availableSpace / (fNumTrackers - 1);

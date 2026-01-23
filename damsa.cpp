@@ -8,15 +8,18 @@
 #include "G4AnalysisManager.hh"
 
 #include "construction.h"
-#include "physics.h"
+// #include "physics.h"
 #include "action.h"
+#include "analysis.h"
+#include "QBBC.hh"
 
 int main (int argc, char *argv[])
 {
     G4RunManager *runManager = new G4RunManager();
 
     runManager->SetUserInitialization(new DamsaDetectorConstruction());
-    runManager->SetUserInitialization(new DamsaPhysicsList());
+    // runManager->SetUserInitialization(new DamsaPhysicsList());
+    runManager->SetUserInitialization(new QBBC());
     runManager->SetUserInitialization(new DamsaActionInitialization());
 
     runManager->Initialize();
@@ -39,6 +42,8 @@ int main (int argc, char *argv[])
         G4String fileName = argv[1];
         UIManager->ApplyCommand(command+fileName);
     }
+    
+    DamsaAnalysis::Instance()->PrintSummary();
 
     delete ui;
     delete visManager;
