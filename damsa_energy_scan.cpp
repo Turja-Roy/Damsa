@@ -1,4 +1,5 @@
 #include <iostream>
+#include <sstream>
 
 #include "G4RunManager.hh"
 #include "G4UImanager.hh"
@@ -47,8 +48,19 @@ int main (int argc, char *argv[])
         G4String command = "/run/beamOn " + std::to_string(eventsPerEnergy);
         UIManager->ApplyCommand(command);
         
-        // Print and reset analysis
+        // Print and save analysis
         DamsaAnalysis::Instance()->PrintSummary();
+        
+        // Save to text file
+        std::stringstream filename;
+        filename << "analysis_" << energies[i]/MeV << "MeV.txt";
+        DamsaAnalysis::Instance()->SaveToFile(filename.str());
+        
+        // Save ROOT histograms and plots
+        std::stringstream rootfile;
+        rootfile << "particles_" << energies[i]/MeV << "MeV.root";
+        DamsaAnalysis::Instance()->WriteROOTHistograms(rootfile.str());
+        
         DamsaAnalysis::Instance()->Reset();
         
         G4cout << "Completed " << eventsPerEnergy << " events at " 
