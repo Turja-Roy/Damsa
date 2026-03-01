@@ -28,49 +28,60 @@ DamsaSteppingAction::~DamsaSteppingAction()
 void DamsaSteppingAction::UserSteppingAction(const G4Step* step)
 {
     G4Track* track = step->GetTrack();
-    G4VPhysicalVolume* volume = step->GetPostStepPoint()->GetTouchableHandle()->GetVolume();
-    G4StepStatus stepStatus = step->GetPostStepPoint()->GetStepStatus();
+    G4StepPoint* postStepPoint = step->GetPostStepPoint();
     
-    // Only record particles when they FIRST ENTER the scoring volume (boundary crossing)
-    // PostStepPoint = where particle IS NOW (just entered the volume)
-    if(stepStatus != fGeomBoundary) return;  // Not at a boundary, skip
+    // Safety check for valid post-step point
+    if(!postStepPoint) return;
     
-    // Now record particles at boundaries
-    if(volume->GetName() == "physScoringMagnetEntrance") {
-        G4String particleName = track->GetDefinition()->GetParticleName();
-        G4double energy = track->GetKineticEnergy();
-        
-        G4ThreeVector momentum = track->GetMomentumDirection();
-        G4double angle = momentum.angle(G4ThreeVector(0, 0, 1));
-        
-        DamsaAnalysis::Instance()->RecordParticle(particleName, energy, "MagnetEntrance", angle);
+    G4VPhysicalVolume* volume = postStepPoint->GetTouchableHandle()->GetVolume();
+    if(!volume) return;
+    
+    G4StepStatus stepStatus = postStepPoint->GetStepStatus();
+    
+    // Only record particles when they cross a geometry boundary
+    if(stepStatus != fGeomBoundary) return;
+    
+    // Get particle properties
+    G4String particleName = track->GetDefinition()->GetParticleName();
+    G4double energy = track->GetKineticEnergy();
+    G4int trackID = track->GetTrackID();
+    G4bool isPrimary = (track->GetParentID() == 0);  // Primary particle has parentID = 0
+    
+    // Check momentum direction - only count forward-moving particles (positive Z momentum)
+    G4ThreeVector momentum = track->GetMomentumDirection();
+    G4double cosTheta = momentum.z();  // Dot product with beam axis (0,0,1)
+    
+    // Skip backward-moving particles (momentum in -Z direction)
+    if(cosTheta < 0) return;
+    
+    G4double angle = momentum.angle(G4ThreeVector(0, 0, 1));  // Angle from beam axis
+    
+    G4String volumeName = volume->GetName();
+    
+    // Target exit scoring plane
+    if(volumeName == "physScoringVolumeTarget") {
+        // Check if this track was already recorded at this location
+        if(!DamsaAnalysis::Instance()->WasTrackRecorded(trackID, "TargetExit")) {
+            DamsaAnalysis::Instance()->RecordParticle(particleName, energy, "TargetExit", angle, trackID, isPrimary);
+        }
     }
-    else if(volume->GetName() == "physScoringCaloEntrance") {
-        G4String particleName = track->GetDefinition()->GetParticleName();
-        G4double energy = track->GetKineticEnergy();
-        
-        G4ThreeVector momentum = track->GetMomentumDirection();
-        G4double angle = momentum.angle(G4ThreeVector(0, 0, 1));
-        
-        DamsaAnalysis::Instance()->RecordParticle(particleName, energy, "CaloEntrance", angle);
+    // Magnet entrance scoring plane
+    else if(volumeName == "physScoringMagnetEntrance") {
+        if(!DamsaAnalysis::Instance()->WasTrackRecorded(trackID, "MagnetEntrance")) {
+            DamsaAnalysis::Instance()->RecordParticle(particleName, energy, "MagnetEntrance", angle, trackID, isPrimary);
+        }
     }
-    else if(volume->GetName() == "physScoringCaloExit") {
-        G4String particleName = track->GetDefinition()->GetParticleName();
-        G4double energy = track->GetKineticEnergy();
-        
-        G4ThreeVector momentum = track->GetMomentumDirection();
-        G4double angle = momentum.angle(G4ThreeVector(0, 0, 1));
-        
-        DamsaAnalysis::Instance()->RecordParticle(particleName, energy, "CaloExit", angle);
+    // Calorimeter entrance scoring plane
+    else if(volumeName == "physScoringCaloEntrance") {
+        if(!DamsaAnalysis::Instance()->WasTrackRecorded(trackID, "CaloEntrance")) {
+            DamsaAnalysis::Instance()->RecordParticle(particleName, energy, "CaloEntrance", angle, trackID, isPrimary);
+        }
     }
-    else if(volume->GetName() == "physScoringVolumeTarget") {
-        G4String particleName = track->GetDefinition()->GetParticleName();
-        G4double energy = track->GetKineticEnergy();
-        
-        G4ThreeVector momentum = track->GetMomentumDirection();
-        G4double angle = momentum.angle(G4ThreeVector(0, 0, 1));
-        
-        DamsaAnalysis::Instance()->RecordParticle(particleName, energy, "TargetExit", angle);
+    // Calorimeter exit scoring plane
+    else if(volumeName == "physScoringCaloExit") {
+        if(!DamsaAnalysis::Instance()->WasTrackRecorded(trackID, "CaloExit")) {
+            DamsaAnalysis::Instance()->RecordParticle(particleName, energy, "CaloExit", angle, trackID, isPrimary);
+        }
     }
 }
 

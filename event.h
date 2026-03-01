@@ -9,6 +9,7 @@
 #include "G4THitsMap.hh"
 #include "G4RunManager.hh"
 #include "G4PhysicalVolumeStore.hh"
+#include "analysis.h"
 
 class DamsaEventAction : public G4UserEventAction
 {
@@ -27,7 +28,10 @@ DamsaEventAction::~DamsaEventAction()
 {}
 
 void DamsaEventAction::BeginOfEventAction(const G4Event*)
-{}
+{
+    // Reset per-event track ID sets to prevent cross-event contamination
+    DamsaAnalysis::Instance()->ResetEventTracking();
+}
 
 void DamsaEventAction::EndOfEventAction(const G4Event* event)
 {

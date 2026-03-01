@@ -8,6 +8,7 @@
 #include <iomanip>
 #include <sys/stat.h>
 #include <vector>
+#include <set>
 #include "TFile.h"
 #include "TH1D.h"
 #include "TCanvas.h"
@@ -19,16 +20,26 @@ public:
     static DamsaAnalysis* Instance();
     
     void RecordParticle(const G4String& particleName, G4double energy, 
-                       const G4String& location, G4double angle);
+                       const G4String& location, G4double angle, G4int trackID, G4bool isPrimary);
     void PrintSummary();
     void SaveToFile(const G4String& filename);
     void WriteROOTHistograms(const G4String& filename);
     void Reset();
+    void ResetEventTracking();  // Reset per-event track ID sets
+    
+    // Check if a track was already recorded at a given location
+    G4bool WasTrackRecorded(G4int trackID, const G4String& location);
     
 private:
     DamsaAnalysis();
     ~DamsaAnalysis();
     static DamsaAnalysis* fInstance;
+    
+    // Per-event track ID sets to prevent double counting
+    std::set<G4int> fTargetExitTracks;
+    std::set<G4int> fMagnetEntranceTracks;
+    std::set<G4int> fCaloEntranceTracks;
+    std::set<G4int> fCaloExitTracks;
     
     // Counters at target exit
     G4int fTargetExitNeutrons;
@@ -36,6 +47,7 @@ private:
     G4int fTargetExitElectrons;
     G4int fTargetExitPositrons;
     G4double fTargetExitEnergy;
+    G4double fTargetExitPrimaryEnergy;
     
     // Counters at magnet entrance
     G4int fMagnetEntranceNeutrons;
@@ -43,6 +55,7 @@ private:
     G4int fMagnetEntranceElectrons;
     G4int fMagnetEntrancePositrons;
     G4double fMagnetEntranceEnergy;
+    G4double fMagnetEntrancePrimaryEnergy;
     
     // Counters at calorimeter entrance
     G4int fCaloEntranceNeutrons;
@@ -50,6 +63,7 @@ private:
     G4int fCaloEntranceElectrons;
     G4int fCaloEntrancePositrons;
     G4double fCaloEntranceEnergy;
+    G4double fCaloEntrancePrimaryEnergy;
     
     // Counters at calorimeter exit
     G4int fCaloExitNeutrons;
@@ -57,6 +71,7 @@ private:
     G4int fCaloExitElectrons;
     G4int fCaloExitPositrons;
     G4double fCaloExitEnergy;
+    G4double fCaloExitPrimaryEnergy;
     
     // Magnet entrance particle storage (using vectors for dynamic sizing)
     std::vector<G4double> fMagnetEntrancePhotonEnergies;
@@ -102,32 +117,65 @@ DamsaAnalysis* DamsaAnalysis::Instance()
 DamsaAnalysis::DamsaAnalysis()
 : fTargetExitNeutrons(0), fTargetExitPhotons(0),
   fTargetExitElectrons(0), fTargetExitPositrons(0),
-  fTargetExitEnergy(0),
+  fTargetExitEnergy(0), fTargetExitPrimaryEnergy(0),
   fMagnetEntranceNeutrons(0), fMagnetEntrancePhotons(0),
   fMagnetEntranceElectrons(0), fMagnetEntrancePositrons(0),
-  fMagnetEntranceEnergy(0),
+  fMagnetEntranceEnergy(0), fMagnetEntrancePrimaryEnergy(0),
   fCaloEntranceNeutrons(0), fCaloEntrancePhotons(0),
   fCaloEntranceElectrons(0), fCaloEntrancePositrons(0),
-  fCaloEntranceEnergy(0),
+  fCaloEntranceEnergy(0), fCaloEntrancePrimaryEnergy(0),
   fCaloExitNeutrons(0), fCaloExitPhotons(0),
   fCaloExitElectrons(0), fCaloExitPositrons(0),
-  fCaloExitEnergy(0)
+  fCaloExitEnergy(0), fCaloExitPrimaryEnergy(0)
 {}
 
 DamsaAnalysis::~DamsaAnalysis()
 {}
 
-void DamsaAnalysis::RecordParticle(const G4String& particleName, G4double energy,
-                                   const G4String& location, G4double angle)
+G4bool DamsaAnalysis::WasTrackRecorded(G4int trackID, const G4String& location)
 {
     if(location == "TargetExit") {
+        return fTargetExitTracks.find(trackID) != fTargetExitTracks.end();
+    }
+    else if(location == "MagnetEntrance") {
+        return fMagnetEntranceTracks.find(trackID) != fMagnetEntranceTracks.end();
+    }
+    else if(location == "CaloEntrance") {
+        return fCaloEntranceTracks.find(trackID) != fCaloEntranceTracks.end();
+    }
+    else if(location == "CaloExit") {
+        return fCaloExitTracks.find(trackID) != fCaloExitTracks.end();
+    }
+    return false;
+}
+
+void DamsaAnalysis::ResetEventTracking()
+{
+    fTargetExitTracks.clear();
+    fMagnetEntranceTracks.clear();
+    fCaloEntranceTracks.clear();
+    fCaloExitTracks.clear();
+}
+
+void DamsaAnalysis::RecordParticle(const G4String& particleName, G4double energy,
+                                   const G4String& location, G4double angle, 
+                                   G4int trackID, G4bool isPrimary)
+{
+    // Mark this track as recorded at this location
+    if(location == "TargetExit") {
+        fTargetExitTracks.insert(trackID);
         if(particleName == "neutron") fTargetExitNeutrons++;
         else if(particleName == "gamma") fTargetExitPhotons++;
         else if(particleName == "e-") fTargetExitElectrons++;
         else if(particleName == "e+") fTargetExitPositrons++;
+        // Count primary beam separately if needed
+        if(isPrimary) {
+            fTargetExitPrimaryEnergy += energy;
+        }
         fTargetExitEnergy += energy;
     }
     else if(location == "MagnetEntrance") {
+        fMagnetEntranceTracks.insert(trackID);
         if(particleName == "neutron") {
             fMagnetEntranceNeutrons++;
             fMagnetEntranceNeutronEnergies.push_back(energy);
@@ -148,9 +196,13 @@ void DamsaAnalysis::RecordParticle(const G4String& particleName, G4double energy
             fMagnetEntrancePositronEnergies.push_back(energy);
             fMagnetEntrancePositronAngles.push_back(angle);
         }
+        if(isPrimary) {
+            fMagnetEntrancePrimaryEnergy += energy;
+        }
         fMagnetEntranceEnergy += energy;
     }
     else if(location == "CaloEntrance") {
+        fCaloEntranceTracks.insert(trackID);
         if(particleName == "neutron") {
             fCaloEntranceNeutrons++;
             fCaloEntranceNeutronEnergies.push_back(energy);
@@ -171,9 +223,13 @@ void DamsaAnalysis::RecordParticle(const G4String& particleName, G4double energy
             fCaloEntrancePositronEnergies.push_back(energy);
             fCaloEntrancePositronAngles.push_back(angle);
         }
+        if(isPrimary) {
+            fCaloEntrancePrimaryEnergy += energy;
+        }
         fCaloEntranceEnergy += energy;
     }
     else if(location == "CaloExit") {
+        fCaloExitTracks.insert(trackID);
         if(particleName == "neutron") {
             fCaloExitNeutrons++;
             fCaloExitNeutronEnergies.push_back(energy);
@@ -194,6 +250,9 @@ void DamsaAnalysis::RecordParticle(const G4String& particleName, G4double energy
             fCaloExitPositronEnergies.push_back(energy);
             fCaloExitPositronAngles.push_back(angle);
         }
+        if(isPrimary) {
+            fCaloExitPrimaryEnergy += energy;
+        }
         fCaloExitEnergy += energy;
     }
 }
@@ -209,6 +268,8 @@ void DamsaAnalysis::PrintSummary()
     G4cout << "Electrons:  " << fTargetExitElectrons << G4endl;
     G4cout << "Positrons:  " << fTargetExitPositrons << G4endl;
     G4cout << "Total Energy: " << fTargetExitEnergy/GeV << " GeV" << G4endl;
+    G4cout << "  (Primary beam: " << fTargetExitPrimaryEnergy/GeV << " GeV, Secondaries: " 
+           << (fTargetExitEnergy - fTargetExitPrimaryEnergy)/GeV << " GeV)" << G4endl;
     
     // Magnet Entrance Summary
     G4cout << "\n=============================================" << G4endl;
@@ -219,6 +280,8 @@ void DamsaAnalysis::PrintSummary()
     G4cout << "Electrons:  " << fMagnetEntranceElectrons << G4endl;
     G4cout << "Positrons:  " << fMagnetEntrancePositrons << G4endl;
     G4cout << "Total Energy: " << fMagnetEntranceEnergy/GeV << " GeV" << G4endl;
+    G4cout << "  (Primary beam: " << fMagnetEntrancePrimaryEnergy/GeV << " GeV, Secondaries: " 
+           << (fMagnetEntranceEnergy - fMagnetEntrancePrimaryEnergy)/GeV << " GeV)" << G4endl;
     
     // Magnet Entrance Photon Spectrum
     if(fMagnetEntrancePhotonEnergies.size() > 0) {
@@ -346,6 +409,8 @@ void DamsaAnalysis::PrintSummary()
     G4cout << "Electrons:  " << fCaloEntranceElectrons << G4endl;
     G4cout << "Positrons:  " << fCaloEntrancePositrons << G4endl;
     G4cout << "Total Energy: " << fCaloEntranceEnergy/GeV << " GeV" << G4endl;
+    G4cout << "  (Primary beam: " << fCaloEntrancePrimaryEnergy/GeV << " GeV, Secondaries: " 
+           << (fCaloEntranceEnergy - fCaloEntrancePrimaryEnergy)/GeV << " GeV)" << G4endl;
     
     // Calorimeter Entrance Photon Spectrum
     if(fCaloEntrancePhotonEnergies.size() > 0) {
@@ -403,6 +468,8 @@ void DamsaAnalysis::PrintSummary()
     G4cout << "Electrons:  " << fCaloExitElectrons << G4endl;
     G4cout << "Positrons:  " << fCaloExitPositrons << G4endl;
     G4cout << "Total Energy: " << fCaloExitEnergy/GeV << " GeV" << G4endl;
+    G4cout << "  (Primary beam: " << fCaloExitPrimaryEnergy/GeV << " GeV, Secondaries: " 
+           << (fCaloExitEnergy - fCaloExitPrimaryEnergy)/GeV << " GeV)" << G4endl;
     
     // Calorimeter Exit Photon Spectrum
     if(fCaloExitPhotonEnergies.size() > 0) {
@@ -733,12 +800,14 @@ void DamsaAnalysis::Reset()
     fTargetExitElectrons = 0;
     fTargetExitPositrons = 0;
     fTargetExitEnergy = 0;
+    fTargetExitPrimaryEnergy = 0;
     
     fMagnetEntranceNeutrons = 0;
     fMagnetEntrancePhotons = 0;
     fMagnetEntranceElectrons = 0;
     fMagnetEntrancePositrons = 0;
     fMagnetEntranceEnergy = 0;
+    fMagnetEntrancePrimaryEnergy = 0;
     fMagnetEntrancePhotonEnergies.clear();
     fMagnetEntrancePhotonAngles.clear();
     fMagnetEntranceNeutronEnergies.clear();
@@ -753,6 +822,7 @@ void DamsaAnalysis::Reset()
     fCaloEntranceElectrons = 0;
     fCaloEntrancePositrons = 0;
     fCaloEntranceEnergy = 0;
+    fCaloEntrancePrimaryEnergy = 0;
     fCaloEntrancePhotonEnergies.clear();
     fCaloEntrancePhotonAngles.clear();
     fCaloEntranceNeutronEnergies.clear();
@@ -767,6 +837,7 @@ void DamsaAnalysis::Reset()
     fCaloExitElectrons = 0;
     fCaloExitPositrons = 0;
     fCaloExitEnergy = 0;
+    fCaloExitPrimaryEnergy = 0;
     fCaloExitPhotonEnergies.clear();
     fCaloExitPhotonAngles.clear();
     fCaloExitNeutronEnergies.clear();
@@ -775,6 +846,9 @@ void DamsaAnalysis::Reset()
     fCaloExitElectronAngles.clear();
     fCaloExitPositronEnergies.clear();
     fCaloExitPositronAngles.clear();
+    
+    // Also clear per-event tracking
+    ResetEventTracking();
 }
 
 #endif

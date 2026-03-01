@@ -214,6 +214,8 @@ void DamsaDetectorConstruction::BuildCalorimeter(G4LogicalVolume* worldLV, G4dou
     G4double scoringHalfThickness = 0.05*mm;  // Match reference implementation (0.1mm total thickness)
     
     // Scoring plane at calorimeter entrance (BEFORE ECAL, in worldLV)
+    // zPos is currently at the END of the magnet region
+    // Place scoring plane a bit AFTER the magnet, with clearance
     auto* solidScoringCaloEntrance = new G4Box("solidScoringCaloEntrance", fCaloSizeXY/2., fCaloSizeXY/2., scoringHalfThickness);
     fLogicScoringCaloEntrance = new G4LogicalVolume(solidScoringCaloEntrance,
                                                     fMatVacuum,
@@ -223,18 +225,23 @@ void DamsaDetectorConstruction::BuildCalorimeter(G4LogicalVolume* worldLV, G4dou
     fLogicScoringCaloEntrance->SetVisAttributes(scoringEntranceVis);
     // fLogicScoringCaloEntrance->SetVisAttributes(G4VisAttributes::GetInvisible());
     
-    // Place entrance scoring plane just BEFORE ECAL front face (in worldLV, with clearance from magnet)
-    // Magnet ends at zPos, so place scoring BEFORE zPos with extra clearance
-    G4double caloEntranceZ = zPos - 1.0*mm - scoringHalfThickness;
+    // Place entrance scoring plane AFTER magnet ends (zPos + clearance)
+    G4double caloEntranceZ = zPos + 1.0*mm + scoringHalfThickness;
     new G4PVPlacement(0, G4ThreeVector(0., 0., caloEntranceZ),
                       fLogicScoringCaloEntrance, "physScoringCaloEntrance",
                       worldLV, false, 0, true);
     
     G4cout << "\n=== CALORIMETER ENTRANCE SCORING GEOMETRY ===" << G4endl;
     G4cout << "ECAL depth: " << ecalDepth/cm << " cm" << G4endl;
-    G4cout << "ECAL will be centered at absolute Z: " << (zPos + ecalDepth/2.)/cm << " cm" << G4endl;
-    G4cout << "ECAL front face absolute Z: " << zPos/cm << " cm" << G4endl;
+    G4cout << "Magnet region ends at Z: " << zPos/cm << " cm" << G4endl;
     G4cout << "Calo entrance scoring absolute Z: " << caloEntranceZ/cm << " cm" << G4endl;
+    
+    // Gap between magnet and ECAL for the scoring plane
+    G4double gapForScoring = 2.0*mm + 2*scoringHalfThickness;  // 2mm gap + scoring plane thickness
+    zPos += gapForScoring;  // Move past the gap
+    
+    G4cout << "ECAL front face absolute Z: " << zPos/cm << " cm" << G4endl;
+    G4cout << "ECAL will be centered at absolute Z: " << (zPos + ecalDepth/2.)/cm << " cm" << G4endl;
 
     // Create ECAL container
     auto* solidECAL = new G4Box("solidECAL", fCaloSizeXY/2., fCaloSizeXY/2., ecalDepth/2.);
