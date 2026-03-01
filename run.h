@@ -14,6 +14,8 @@
 #include <sstream>
 #include <string>
 
+#include "analysis.h"
+
 class DamsaRunAction : public G4UserRunAction {
 public:
     DamsaRunAction();
@@ -141,6 +143,9 @@ void DamsaRunAction::EndOfRunAction(const G4Run* run) {
     delete file;
     
     G4cout << "Plots saved to " << plotDir << "/ directory" << G4endl;
+    
+    // Write analysis histograms (particle spectra at scoring planes)
+    DamsaAnalysis::Instance()->WriteROOTHistograms("particle_spectra.root");
 }
 
 #endif

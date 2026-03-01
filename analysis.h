@@ -49,6 +49,16 @@ private:
     G4double fTargetExitEnergy;
     G4double fTargetExitPrimaryEnergy;
     
+    // Target exit particle storage
+    std::vector<G4double> fTargetExitPhotonEnergies;
+    std::vector<G4double> fTargetExitPhotonAngles;
+    std::vector<G4double> fTargetExitNeutronEnergies;
+    std::vector<G4double> fTargetExitNeutronAngles;
+    std::vector<G4double> fTargetExitElectronEnergies;
+    std::vector<G4double> fTargetExitElectronAngles;
+    std::vector<G4double> fTargetExitPositronEnergies;
+    std::vector<G4double> fTargetExitPositronAngles;
+    
     // Counters at magnet entrance
     G4int fMagnetEntranceNeutrons;
     G4int fMagnetEntrancePhotons;
@@ -164,10 +174,26 @@ void DamsaAnalysis::RecordParticle(const G4String& particleName, G4double energy
     // Mark this track as recorded at this location
     if(location == "TargetExit") {
         fTargetExitTracks.insert(trackID);
-        if(particleName == "neutron") fTargetExitNeutrons++;
-        else if(particleName == "gamma") fTargetExitPhotons++;
-        else if(particleName == "e-") fTargetExitElectrons++;
-        else if(particleName == "e+") fTargetExitPositrons++;
+        if(particleName == "neutron") {
+            fTargetExitNeutrons++;
+            fTargetExitNeutronEnergies.push_back(energy);
+            fTargetExitNeutronAngles.push_back(angle);
+        }
+        else if(particleName == "gamma") {
+            fTargetExitPhotons++;
+            fTargetExitPhotonEnergies.push_back(energy);
+            fTargetExitPhotonAngles.push_back(angle);
+        }
+        else if(particleName == "e-") {
+            fTargetExitElectrons++;
+            fTargetExitElectronEnergies.push_back(energy);
+            fTargetExitElectronAngles.push_back(angle);
+        }
+        else if(particleName == "e+") {
+            fTargetExitPositrons++;
+            fTargetExitPositronEnergies.push_back(energy);
+            fTargetExitPositronAngles.push_back(angle);
+        }
         // Count primary beam separately if needed
         if(isPrimary) {
             fTargetExitPrimaryEnergy += energy;
@@ -270,6 +296,195 @@ void DamsaAnalysis::PrintSummary()
     G4cout << "Total Energy: " << fTargetExitEnergy/GeV << " GeV" << G4endl;
     G4cout << "  (Primary beam: " << fTargetExitPrimaryEnergy/GeV << " GeV, Secondaries: " 
            << (fTargetExitEnergy - fTargetExitPrimaryEnergy)/GeV << " GeV)" << G4endl;
+    
+    // Target Exit Photon Spectrum
+    if(fTargetExitPhotonEnergies.size() > 0) {
+        G4cout << "\n=== Photon Energy Spectrum at Target Exit ===" << G4endl;
+        G4double bins[] = {0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 1.0, 2.0, 4.0, 8.0};
+        G4int nBins = 9;
+        G4int counts[9] = {0};
+        
+        for(size_t i = 0; i < fTargetExitPhotonEnergies.size(); i++) {
+            G4double E = fTargetExitPhotonEnergies[i] / GeV;
+            for(G4int j = 0; j < nBins; j++) {
+                if(E >= bins[j] && E < bins[j+1]) {
+                    counts[j]++;
+                    break;
+                }
+            }
+        }
+        
+        for(G4int i = 0; i < nBins; i++) {
+            G4cout << "  [" << bins[i] << " - " << bins[i+1] << " GeV]: "
+                   << counts[i] << " photons" << G4endl;
+        }
+        G4cout << "  Total photons: " << fTargetExitPhotonEnergies.size() << G4endl;
+    }
+    
+    // Target Exit Photon Angular Distribution
+    if(fTargetExitPhotonAngles.size() > 0) {
+        G4cout << "\n=== Photon Angular Distribution at Target Exit ===" << G4endl;
+        G4double angleBins[] = {0.0, 5.0, 10.0, 20.0, 30.0, 45.0, 60.0, 90.0};
+        G4int nAngleBins = 7;
+        G4int angleCounts[7] = {0};
+        
+        for(size_t i = 0; i < fTargetExitPhotonAngles.size(); i++) {
+            G4double angleDeg = fTargetExitPhotonAngles[i] * 180.0 / 3.14159265;
+            for(G4int j = 0; j < nAngleBins; j++) {
+                if(angleDeg >= angleBins[j] && angleDeg < angleBins[j+1]) {
+                    angleCounts[j]++;
+                    break;
+                }
+            }
+        }
+        
+        G4cout << "  (Angle relative to beam axis, 0 deg = straight forward)" << G4endl;
+        for(G4int i = 0; i < nAngleBins; i++) {
+            G4cout << "  [" << angleBins[i] << " - " << angleBins[i+1] << " degrees]: " 
+                   << angleCounts[i] << " photons" << G4endl;
+        }
+    }
+    
+    // Target Exit Neutron Spectrum
+    if(fTargetExitNeutronEnergies.size() > 0) {
+        G4cout << "\n=== Neutron Energy Spectrum at Target Exit ===" << G4endl;
+        G4double neutronEnergyBins[] = {0.0, 0.1, 0.5, 1.0, 2.0, 5.0, 10.0, 50.0, 100.0};
+        G4int nNeutronEnergyBins = 8;
+        G4int neutronEnergyCounts[8] = {0};
+        
+        for(size_t i = 0; i < fTargetExitNeutronEnergies.size(); i++) {
+            G4double E = fTargetExitNeutronEnergies[i] / GeV;
+            for(G4int j = 0; j < nNeutronEnergyBins; j++) {
+                if(E >= neutronEnergyBins[j] && E < neutronEnergyBins[j+1]) {
+                    neutronEnergyCounts[j]++;
+                    break;
+                }
+            }
+        }
+        
+        for(G4int i = 0; i < nNeutronEnergyBins; i++) {
+            G4cout << "  [" << neutronEnergyBins[i] << " - " << neutronEnergyBins[i+1] 
+                   << " GeV]: " << neutronEnergyCounts[i] << " neutrons" << G4endl;
+        }
+    }
+    
+    // Target Exit Neutron Angular Distribution
+    if(fTargetExitNeutronAngles.size() > 0) {
+        G4cout << "\n=== Neutron Angular Distribution at Target Exit ===" << G4endl;
+        G4double angleBins[] = {0.0, 5.0, 10.0, 20.0, 30.0, 45.0, 60.0, 90.0};
+        G4int nAngleBins = 7;
+        G4int angleCounts[7] = {0};
+        
+        for(size_t i = 0; i < fTargetExitNeutronAngles.size(); i++) {
+            G4double angleDeg = fTargetExitNeutronAngles[i] * 180.0 / 3.14159265;
+            for(G4int j = 0; j < nAngleBins; j++) {
+                if(angleDeg >= angleBins[j] && angleDeg < angleBins[j+1]) {
+                    angleCounts[j]++;
+                    break;
+                }
+            }
+        }
+        
+        G4cout << "  (Angle relative to beam axis, 0 deg = straight forward)" << G4endl;
+        for(G4int i = 0; i < nAngleBins; i++) {
+            G4cout << "  [" << angleBins[i] << " - " << angleBins[i+1] << " degrees]: " 
+                   << angleCounts[i] << " neutrons" << G4endl;
+        }
+    }
+    
+    // Target Exit Electron Spectrum
+    if(fTargetExitElectronEnergies.size() > 0) {
+        G4cout << "\n=== Electron Energy Spectrum at Target Exit ===" << G4endl;
+        G4double electronEnergyBins[] = {0.0, 0.1, 0.2, 0.5, 1.0, 2.0, 4.0, 8.0};
+        G4int nElectronEnergyBins = 7;
+        G4int electronEnergyCounts[7] = {0};
+        
+        for(size_t i = 0; i < fTargetExitElectronEnergies.size(); i++) {
+            G4double E = fTargetExitElectronEnergies[i] / GeV;
+            for(G4int j = 0; j < nElectronEnergyBins; j++) {
+                if(E >= electronEnergyBins[j] && E < electronEnergyBins[j+1]) {
+                    electronEnergyCounts[j]++;
+                    break;
+                }
+            }
+        }
+        
+        for(G4int i = 0; i < nElectronEnergyBins; i++) {
+            G4cout << "  [" << electronEnergyBins[i] << " - " << electronEnergyBins[i+1] 
+                   << " GeV]: " << electronEnergyCounts[i] << " electrons" << G4endl;
+        }
+    }
+    
+    // Target Exit Electron Angular Distribution
+    if(fTargetExitElectronAngles.size() > 0) {
+        G4cout << "\n=== Electron Angular Distribution at Target Exit ===" << G4endl;
+        G4double angleBins[] = {0.0, 5.0, 10.0, 20.0, 30.0, 45.0, 60.0, 90.0};
+        G4int nAngleBins = 7;
+        G4int angleCounts[7] = {0};
+        
+        for(size_t i = 0; i < fTargetExitElectronAngles.size(); i++) {
+            G4double angleDeg = fTargetExitElectronAngles[i] * 180.0 / 3.14159265;
+            for(G4int j = 0; j < nAngleBins; j++) {
+                if(angleDeg >= angleBins[j] && angleDeg < angleBins[j+1]) {
+                    angleCounts[j]++;
+                    break;
+                }
+            }
+        }
+        
+        G4cout << "  (Angle relative to beam axis, 0 deg = straight forward)" << G4endl;
+        for(G4int i = 0; i < nAngleBins; i++) {
+            G4cout << "  [" << angleBins[i] << " - " << angleBins[i+1] << " degrees]: " 
+                   << angleCounts[i] << " electrons" << G4endl;
+        }
+    }
+    
+    // Target Exit Positron Spectrum
+    if(fTargetExitPositronEnergies.size() > 0) {
+        G4cout << "\n=== Positron Energy Spectrum at Target Exit ===" << G4endl;
+        G4double positronEnergyBins[] = {0.0, 0.1, 0.2, 0.5, 1.0, 2.0, 4.0, 8.0};
+        G4int nPositronEnergyBins = 7;
+        G4int positronEnergyCounts[7] = {0};
+        
+        for(size_t i = 0; i < fTargetExitPositronEnergies.size(); i++) {
+            G4double E = fTargetExitPositronEnergies[i] / GeV;
+            for(G4int j = 0; j < nPositronEnergyBins; j++) {
+                if(E >= positronEnergyBins[j] && E < positronEnergyBins[j+1]) {
+                    positronEnergyCounts[j]++;
+                    break;
+                }
+            }
+        }
+        
+        for(G4int i = 0; i < nPositronEnergyBins; i++) {
+            G4cout << "  [" << positronEnergyBins[i] << " - " << positronEnergyBins[i+1] 
+                   << " GeV]: " << positronEnergyCounts[i] << " positrons" << G4endl;
+        }
+    }
+    
+    // Target Exit Positron Angular Distribution
+    if(fTargetExitPositronAngles.size() > 0) {
+        G4cout << "\n=== Positron Angular Distribution at Target Exit ===" << G4endl;
+        G4double angleBins[] = {0.0, 5.0, 10.0, 20.0, 30.0, 45.0, 60.0, 90.0};
+        G4int nAngleBins = 7;
+        G4int angleCounts[7] = {0};
+        
+        for(size_t i = 0; i < fTargetExitPositronAngles.size(); i++) {
+            G4double angleDeg = fTargetExitPositronAngles[i] * 180.0 / 3.14159265;
+            for(G4int j = 0; j < nAngleBins; j++) {
+                if(angleDeg >= angleBins[j] && angleDeg < angleBins[j+1]) {
+                    angleCounts[j]++;
+                    break;
+                }
+            }
+        }
+        
+        G4cout << "  (Angle relative to beam axis, 0 deg = straight forward)" << G4endl;
+        for(G4int i = 0; i < nAngleBins; i++) {
+            G4cout << "  [" << angleBins[i] << " - " << angleBins[i+1] << " degrees]: " 
+                   << angleCounts[i] << " positrons" << G4endl;
+        }
+    }
     
     // Magnet Entrance Summary
     G4cout << "\n=============================================" << G4endl;
@@ -459,6 +674,148 @@ void DamsaAnalysis::PrintSummary()
         }
     }
     
+    // Calorimeter Entrance Photon Angular Distribution
+    if(fCaloEntrancePhotonAngles.size() > 0) {
+        G4cout << "\n=== Photon Angular Distribution at Calorimeter Entrance ===" << G4endl;
+        G4double angleBins[] = {0.0, 5.0, 10.0, 20.0, 30.0, 45.0, 60.0, 90.0};
+        G4int nAngleBins = 7;
+        G4int angleCounts[7] = {0};
+        
+        for(size_t i = 0; i < fCaloEntrancePhotonAngles.size(); i++) {
+            G4double angleDeg = fCaloEntrancePhotonAngles[i] * 180.0 / 3.14159265;
+            for(G4int j = 0; j < nAngleBins; j++) {
+                if(angleDeg >= angleBins[j] && angleDeg < angleBins[j+1]) {
+                    angleCounts[j]++;
+                    break;
+                }
+            }
+        }
+        
+        G4cout << "  (Angle relative to beam axis, 0 deg = straight forward)" << G4endl;
+        for(G4int i = 0; i < nAngleBins; i++) {
+            G4cout << "  [" << angleBins[i] << " - " << angleBins[i+1] << " degrees]: " 
+                   << angleCounts[i] << " photons" << G4endl;
+        }
+    }
+    
+    // Calorimeter Entrance Neutron Angular Distribution
+    if(fCaloEntranceNeutronAngles.size() > 0) {
+        G4cout << "\n=== Neutron Angular Distribution at Calorimeter Entrance ===" << G4endl;
+        G4double angleBins[] = {0.0, 5.0, 10.0, 20.0, 30.0, 45.0, 60.0, 90.0};
+        G4int nAngleBins = 7;
+        G4int angleCounts[7] = {0};
+        
+        for(size_t i = 0; i < fCaloEntranceNeutronAngles.size(); i++) {
+            G4double angleDeg = fCaloEntranceNeutronAngles[i] * 180.0 / 3.14159265;
+            for(G4int j = 0; j < nAngleBins; j++) {
+                if(angleDeg >= angleBins[j] && angleDeg < angleBins[j+1]) {
+                    angleCounts[j]++;
+                    break;
+                }
+            }
+        }
+        
+        G4cout << "  (Angle relative to beam axis, 0 deg = straight forward)" << G4endl;
+        for(G4int i = 0; i < nAngleBins; i++) {
+            G4cout << "  [" << angleBins[i] << " - " << angleBins[i+1] << " degrees]: " 
+                   << angleCounts[i] << " neutrons" << G4endl;
+        }
+    }
+    
+    // Calorimeter Entrance Electron Spectrum
+    if(fCaloEntranceElectronEnergies.size() > 0) {
+        G4cout << "\n=== Electron Energy Spectrum at Calorimeter Entrance ===" << G4endl;
+        G4double electronEnergyBins[] = {0.0, 0.1, 0.2, 0.5, 1.0, 2.0, 4.0, 8.0};
+        G4int nElectronEnergyBins = 7;
+        G4int electronEnergyCounts[7] = {0};
+        
+        for(size_t i = 0; i < fCaloEntranceElectronEnergies.size(); i++) {
+            G4double E = fCaloEntranceElectronEnergies[i] / GeV;
+            for(G4int j = 0; j < nElectronEnergyBins; j++) {
+                if(E >= electronEnergyBins[j] && E < electronEnergyBins[j+1]) {
+                    electronEnergyCounts[j]++;
+                    break;
+                }
+            }
+        }
+        
+        for(G4int i = 0; i < nElectronEnergyBins; i++) {
+            G4cout << "  [" << electronEnergyBins[i] << " - " << electronEnergyBins[i+1] 
+                   << " GeV]: " << electronEnergyCounts[i] << " electrons" << G4endl;
+        }
+    }
+    
+    // Calorimeter Entrance Electron Angular Distribution
+    if(fCaloEntranceElectronAngles.size() > 0) {
+        G4cout << "\n=== Electron Angular Distribution at Calorimeter Entrance ===" << G4endl;
+        G4double angleBins[] = {0.0, 5.0, 10.0, 20.0, 30.0, 45.0, 60.0, 90.0};
+        G4int nAngleBins = 7;
+        G4int angleCounts[7] = {0};
+        
+        for(size_t i = 0; i < fCaloEntranceElectronAngles.size(); i++) {
+            G4double angleDeg = fCaloEntranceElectronAngles[i] * 180.0 / 3.14159265;
+            for(G4int j = 0; j < nAngleBins; j++) {
+                if(angleDeg >= angleBins[j] && angleDeg < angleBins[j+1]) {
+                    angleCounts[j]++;
+                    break;
+                }
+            }
+        }
+        
+        G4cout << "  (Angle relative to beam axis, 0 deg = straight forward)" << G4endl;
+        for(G4int i = 0; i < nAngleBins; i++) {
+            G4cout << "  [" << angleBins[i] << " - " << angleBins[i+1] << " degrees]: " 
+                   << angleCounts[i] << " electrons" << G4endl;
+        }
+    }
+    
+    // Calorimeter Entrance Positron Spectrum
+    if(fCaloEntrancePositronEnergies.size() > 0) {
+        G4cout << "\n=== Positron Energy Spectrum at Calorimeter Entrance ===" << G4endl;
+        G4double positronEnergyBins[] = {0.0, 0.1, 0.2, 0.5, 1.0, 2.0, 4.0, 8.0};
+        G4int nPositronEnergyBins = 7;
+        G4int positronEnergyCounts[7] = {0};
+        
+        for(size_t i = 0; i < fCaloEntrancePositronEnergies.size(); i++) {
+            G4double E = fCaloEntrancePositronEnergies[i] / GeV;
+            for(G4int j = 0; j < nPositronEnergyBins; j++) {
+                if(E >= positronEnergyBins[j] && E < positronEnergyBins[j+1]) {
+                    positronEnergyCounts[j]++;
+                    break;
+                }
+            }
+        }
+        
+        for(G4int i = 0; i < nPositronEnergyBins; i++) {
+            G4cout << "  [" << positronEnergyBins[i] << " - " << positronEnergyBins[i+1] 
+                   << " GeV]: " << positronEnergyCounts[i] << " positrons" << G4endl;
+        }
+    }
+    
+    // Calorimeter Entrance Positron Angular Distribution
+    if(fCaloEntrancePositronAngles.size() > 0) {
+        G4cout << "\n=== Positron Angular Distribution at Calorimeter Entrance ===" << G4endl;
+        G4double angleBins[] = {0.0, 5.0, 10.0, 20.0, 30.0, 45.0, 60.0, 90.0};
+        G4int nAngleBins = 7;
+        G4int angleCounts[7] = {0};
+        
+        for(size_t i = 0; i < fCaloEntrancePositronAngles.size(); i++) {
+            G4double angleDeg = fCaloEntrancePositronAngles[i] * 180.0 / 3.14159265;
+            for(G4int j = 0; j < nAngleBins; j++) {
+                if(angleDeg >= angleBins[j] && angleDeg < angleBins[j+1]) {
+                    angleCounts[j]++;
+                    break;
+                }
+            }
+        }
+        
+        G4cout << "  (Angle relative to beam axis, 0 deg = straight forward)" << G4endl;
+        for(G4int i = 0; i < nAngleBins; i++) {
+            G4cout << "  [" << angleBins[i] << " - " << angleBins[i+1] << " degrees]: " 
+                   << angleCounts[i] << " positrons" << G4endl;
+        }
+    }
+    
     // Calorimeter Exit Summary
     G4cout << "\n=============================================" << G4endl;
     G4cout << "=== Particles EXITING Calorimeter ===" << G4endl;
@@ -493,6 +850,171 @@ void DamsaAnalysis::PrintSummary()
                    << counts[i] << " photons" << G4endl;
         }
         G4cout << "  Total photons: " << fCaloExitPhotonEnergies.size() << G4endl;
+    }
+    
+    // Calorimeter Exit Photon Angular Distribution
+    if(fCaloExitPhotonAngles.size() > 0) {
+        G4cout << "\n=== Photon Angular Distribution at Calorimeter Exit ===" << G4endl;
+        G4double angleBins[] = {0.0, 5.0, 10.0, 20.0, 30.0, 45.0, 60.0, 90.0};
+        G4int nAngleBins = 7;
+        G4int angleCounts[7] = {0};
+        
+        for(size_t i = 0; i < fCaloExitPhotonAngles.size(); i++) {
+            G4double angleDeg = fCaloExitPhotonAngles[i] * 180.0 / 3.14159265;
+            for(G4int j = 0; j < nAngleBins; j++) {
+                if(angleDeg >= angleBins[j] && angleDeg < angleBins[j+1]) {
+                    angleCounts[j]++;
+                    break;
+                }
+            }
+        }
+        
+        G4cout << "  (Angle relative to beam axis, 0 deg = straight forward)" << G4endl;
+        for(G4int i = 0; i < nAngleBins; i++) {
+            G4cout << "  [" << angleBins[i] << " - " << angleBins[i+1] << " degrees]: " 
+                   << angleCounts[i] << " photons" << G4endl;
+        }
+    }
+    
+    // Calorimeter Exit Neutron Spectrum
+    if(fCaloExitNeutronEnergies.size() > 0) {
+        G4cout << "\n=== Neutron Energy Spectrum at Calorimeter Exit ===" << G4endl;
+        G4double neutronEnergyBins[] = {0.0, 0.1, 0.5, 1.0, 2.0, 5.0, 10.0, 50.0, 100.0};
+        G4int nNeutronEnergyBins = 8;
+        G4int neutronEnergyCounts[8] = {0};
+        
+        for(size_t i = 0; i < fCaloExitNeutronEnergies.size(); i++) {
+            G4double E = fCaloExitNeutronEnergies[i] / GeV;
+            for(G4int j = 0; j < nNeutronEnergyBins; j++) {
+                if(E >= neutronEnergyBins[j] && E < neutronEnergyBins[j+1]) {
+                    neutronEnergyCounts[j]++;
+                    break;
+                }
+            }
+        }
+        
+        for(G4int i = 0; i < nNeutronEnergyBins; i++) {
+            G4cout << "  [" << neutronEnergyBins[i] << " - " << neutronEnergyBins[i+1] 
+                   << " GeV]: " << neutronEnergyCounts[i] << " neutrons" << G4endl;
+        }
+    }
+    
+    // Calorimeter Exit Neutron Angular Distribution
+    if(fCaloExitNeutronAngles.size() > 0) {
+        G4cout << "\n=== Neutron Angular Distribution at Calorimeter Exit ===" << G4endl;
+        G4double angleBins[] = {0.0, 5.0, 10.0, 20.0, 30.0, 45.0, 60.0, 90.0};
+        G4int nAngleBins = 7;
+        G4int angleCounts[7] = {0};
+        
+        for(size_t i = 0; i < fCaloExitNeutronAngles.size(); i++) {
+            G4double angleDeg = fCaloExitNeutronAngles[i] * 180.0 / 3.14159265;
+            for(G4int j = 0; j < nAngleBins; j++) {
+                if(angleDeg >= angleBins[j] && angleDeg < angleBins[j+1]) {
+                    angleCounts[j]++;
+                    break;
+                }
+            }
+        }
+        
+        G4cout << "  (Angle relative to beam axis, 0 deg = straight forward)" << G4endl;
+        for(G4int i = 0; i < nAngleBins; i++) {
+            G4cout << "  [" << angleBins[i] << " - " << angleBins[i+1] << " degrees]: " 
+                   << angleCounts[i] << " neutrons" << G4endl;
+        }
+    }
+    
+    // Calorimeter Exit Electron Spectrum
+    if(fCaloExitElectronEnergies.size() > 0) {
+        G4cout << "\n=== Electron Energy Spectrum at Calorimeter Exit ===" << G4endl;
+        G4double electronEnergyBins[] = {0.0, 0.1, 0.2, 0.5, 1.0, 2.0, 4.0, 8.0};
+        G4int nElectronEnergyBins = 7;
+        G4int electronEnergyCounts[7] = {0};
+        
+        for(size_t i = 0; i < fCaloExitElectronEnergies.size(); i++) {
+            G4double E = fCaloExitElectronEnergies[i] / GeV;
+            for(G4int j = 0; j < nElectronEnergyBins; j++) {
+                if(E >= electronEnergyBins[j] && E < electronEnergyBins[j+1]) {
+                    electronEnergyCounts[j]++;
+                    break;
+                }
+            }
+        }
+        
+        for(G4int i = 0; i < nElectronEnergyBins; i++) {
+            G4cout << "  [" << electronEnergyBins[i] << " - " << electronEnergyBins[i+1] 
+                   << " GeV]: " << electronEnergyCounts[i] << " electrons" << G4endl;
+        }
+    }
+    
+    // Calorimeter Exit Electron Angular Distribution
+    if(fCaloExitElectronAngles.size() > 0) {
+        G4cout << "\n=== Electron Angular Distribution at Calorimeter Exit ===" << G4endl;
+        G4double angleBins[] = {0.0, 5.0, 10.0, 20.0, 30.0, 45.0, 60.0, 90.0};
+        G4int nAngleBins = 7;
+        G4int angleCounts[7] = {0};
+        
+        for(size_t i = 0; i < fCaloExitElectronAngles.size(); i++) {
+            G4double angleDeg = fCaloExitElectronAngles[i] * 180.0 / 3.14159265;
+            for(G4int j = 0; j < nAngleBins; j++) {
+                if(angleDeg >= angleBins[j] && angleDeg < angleBins[j+1]) {
+                    angleCounts[j]++;
+                    break;
+                }
+            }
+        }
+        
+        G4cout << "  (Angle relative to beam axis, 0 deg = straight forward)" << G4endl;
+        for(G4int i = 0; i < nAngleBins; i++) {
+            G4cout << "  [" << angleBins[i] << " - " << angleBins[i+1] << " degrees]: " 
+                   << angleCounts[i] << " electrons" << G4endl;
+        }
+    }
+    
+    // Calorimeter Exit Positron Spectrum
+    if(fCaloExitPositronEnergies.size() > 0) {
+        G4cout << "\n=== Positron Energy Spectrum at Calorimeter Exit ===" << G4endl;
+        G4double positronEnergyBins[] = {0.0, 0.1, 0.2, 0.5, 1.0, 2.0, 4.0, 8.0};
+        G4int nPositronEnergyBins = 7;
+        G4int positronEnergyCounts[7] = {0};
+        
+        for(size_t i = 0; i < fCaloExitPositronEnergies.size(); i++) {
+            G4double E = fCaloExitPositronEnergies[i] / GeV;
+            for(G4int j = 0; j < nPositronEnergyBins; j++) {
+                if(E >= positronEnergyBins[j] && E < positronEnergyBins[j+1]) {
+                    positronEnergyCounts[j]++;
+                    break;
+                }
+            }
+        }
+        
+        for(G4int i = 0; i < nPositronEnergyBins; i++) {
+            G4cout << "  [" << positronEnergyBins[i] << " - " << positronEnergyBins[i+1] 
+                   << " GeV]: " << positronEnergyCounts[i] << " positrons" << G4endl;
+        }
+    }
+    
+    // Calorimeter Exit Positron Angular Distribution
+    if(fCaloExitPositronAngles.size() > 0) {
+        G4cout << "\n=== Positron Angular Distribution at Calorimeter Exit ===" << G4endl;
+        G4double angleBins[] = {0.0, 5.0, 10.0, 20.0, 30.0, 45.0, 60.0, 90.0};
+        G4int nAngleBins = 7;
+        G4int angleCounts[7] = {0};
+        
+        for(size_t i = 0; i < fCaloExitPositronAngles.size(); i++) {
+            G4double angleDeg = fCaloExitPositronAngles[i] * 180.0 / 3.14159265;
+            for(G4int j = 0; j < nAngleBins; j++) {
+                if(angleDeg >= angleBins[j] && angleDeg < angleBins[j+1]) {
+                    angleCounts[j]++;
+                    break;
+                }
+            }
+        }
+        
+        G4cout << "  (Angle relative to beam axis, 0 deg = straight forward)" << G4endl;
+        for(G4int i = 0; i < nAngleBins; i++) {
+            G4cout << "  [" << angleBins[i] << " - " << angleBins[i+1] << " degrees]: " 
+                   << angleCounts[i] << " positrons" << G4endl;
+        }
     }
     
     G4cout << "=============================================\n" << G4endl;
@@ -561,6 +1083,82 @@ void DamsaAnalysis::WriteROOTHistograms(const G4String& filename)
     
     gStyle->SetOptStat(111111);
     gStyle->SetPalette(kRainBow);
+    
+    // Create separate ROOT file for Target Exit
+    std::string targetExitPath = "plots/targetexit_histograms.root";
+    TFile* targetExitFile = new TFile(targetExitPath.c_str(), "RECREATE");
+    
+    if(!targetExitFile || targetExitFile->IsZombie()) {
+        G4cout << "ERROR: Could not create ROOT file " << targetExitPath << G4endl;
+    } else {
+        // Photon histograms - Target Exit
+        if(fTargetExitPhotonEnergies.size() > 0) {
+            TH1D* hPhotonEnergy = new TH1D("hPhotonEnergy", "Photon Energy at Target Exit;Energy [GeV];Counts", 100, 0, 8);
+            TH1D* hPhotonAngle = new TH1D("hPhotonAngle", "Photon Angle at Target Exit;Angle [degrees];Counts", 90, 0, 90);
+            
+            for(size_t i = 0; i < fTargetExitPhotonEnergies.size(); i++) {
+                hPhotonEnergy->Fill(fTargetExitPhotonEnergies[i] / GeV);
+                hPhotonAngle->Fill(fTargetExitPhotonAngles[i] * 180.0 / 3.14159265);
+            }
+            
+            hPhotonEnergy->Write();
+            hPhotonAngle->Write();
+            delete hPhotonEnergy;
+            delete hPhotonAngle;
+        }
+        
+        // Neutron histograms - Target Exit
+        if(fTargetExitNeutronEnergies.size() > 0) {
+            TH1D* hNeutronEnergy = new TH1D("hNeutronEnergy", "Neutron Energy at Target Exit;Energy [GeV];Counts", 100, 0, 100);
+            TH1D* hNeutronAngle = new TH1D("hNeutronAngle", "Neutron Angle at Target Exit;Angle [degrees];Counts", 90, 0, 90);
+            
+            for(size_t i = 0; i < fTargetExitNeutronEnergies.size(); i++) {
+                hNeutronEnergy->Fill(fTargetExitNeutronEnergies[i] / GeV);
+                hNeutronAngle->Fill(fTargetExitNeutronAngles[i] * 180.0 / 3.14159265);
+            }
+            
+            hNeutronEnergy->Write();
+            hNeutronAngle->Write();
+            delete hNeutronEnergy;
+            delete hNeutronAngle;
+        }
+        
+        // Electron histograms - Target Exit
+        if(fTargetExitElectronEnergies.size() > 0) {
+            TH1D* hElectronEnergy = new TH1D("hElectronEnergy", "Electron Energy at Target Exit;Energy [GeV];Counts", 100, 0, 8);
+            TH1D* hElectronAngle = new TH1D("hElectronAngle", "Electron Angle at Target Exit;Angle [degrees];Counts", 90, 0, 90);
+            
+            for(size_t i = 0; i < fTargetExitElectronEnergies.size(); i++) {
+                hElectronEnergy->Fill(fTargetExitElectronEnergies[i] / GeV);
+                hElectronAngle->Fill(fTargetExitElectronAngles[i] * 180.0 / 3.14159265);
+            }
+            
+            hElectronEnergy->Write();
+            hElectronAngle->Write();
+            delete hElectronEnergy;
+            delete hElectronAngle;
+        }
+        
+        // Positron histograms - Target Exit
+        if(fTargetExitPositronEnergies.size() > 0) {
+            TH1D* hPositronEnergy = new TH1D("hPositronEnergy", "Positron Energy at Target Exit;Energy [GeV];Counts", 100, 0, 8);
+            TH1D* hPositronAngle = new TH1D("hPositronAngle", "Positron Angle at Target Exit;Angle [degrees];Counts", 90, 0, 90);
+            
+            for(size_t i = 0; i < fTargetExitPositronEnergies.size(); i++) {
+                hPositronEnergy->Fill(fTargetExitPositronEnergies[i] / GeV);
+                hPositronAngle->Fill(fTargetExitPositronAngles[i] * 180.0 / 3.14159265);
+            }
+            
+            hPositronEnergy->Write();
+            hPositronAngle->Write();
+            delete hPositronEnergy;
+            delete hPositronAngle;
+        }
+        
+        targetExitFile->Close();
+        delete targetExitFile;
+        G4cout << "Target Exit histograms saved to: " << targetExitPath << G4endl;
+    }
     
     // Create separate ROOT file for Magnet Entrance
     std::string magnetPath = "plots/magnetentrance_histograms.root";
@@ -801,6 +1399,14 @@ void DamsaAnalysis::Reset()
     fTargetExitPositrons = 0;
     fTargetExitEnergy = 0;
     fTargetExitPrimaryEnergy = 0;
+    fTargetExitPhotonEnergies.clear();
+    fTargetExitPhotonAngles.clear();
+    fTargetExitNeutronEnergies.clear();
+    fTargetExitNeutronAngles.clear();
+    fTargetExitElectronEnergies.clear();
+    fTargetExitElectronAngles.clear();
+    fTargetExitPositronEnergies.clear();
+    fTargetExitPositronAngles.clear();
     
     fMagnetEntranceNeutrons = 0;
     fMagnetEntrancePhotons = 0;
