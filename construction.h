@@ -52,6 +52,9 @@ private:
     G4LogicalVolume* fLogicSiTracker;
     G4LogicalVolume* fLogicCrystal;
     G4LogicalVolume* fLogicMagnetHollow;
+    G4LogicalVolume* fLogicScoringMagnetEntrance;
+    G4LogicalVolume* fLogicScoringCaloEntrance;
+    G4LogicalVolume* fLogicScoringCaloExit;
     G4MagneticField* fMagField;
     
     G4Material* fMatAir;

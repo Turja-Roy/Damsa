@@ -7,6 +7,7 @@
 #include <fstream>
 #include <iomanip>
 #include <sys/stat.h>
+#include <vector>
 #include "TFile.h"
 #include "TH1D.h"
 #include "TCanvas.h"
@@ -36,36 +37,56 @@ private:
     G4int fTargetExitPositrons;
     G4double fTargetExitEnergy;
     
-    // Counters at detector entrance
-    G4int fDetectorNeutrons;
-    G4int fDetectorPhotons;
-    G4int fDetectorElectrons;
-    G4int fDetectorPositrons;
-    G4double fDetectorEnergy;
+    // Counters at magnet entrance
+    G4int fMagnetEntranceNeutrons;
+    G4int fMagnetEntrancePhotons;
+    G4int fMagnetEntranceElectrons;
+    G4int fMagnetEntrancePositrons;
+    G4double fMagnetEntranceEnergy;
     
-    // Photon energy spectrum storage
-    static const int kMaxPhotons = 10000;
-    G4double fDetectorPhotonEnergies[kMaxPhotons];
-    G4int fDetectorPhotonEnergyCount;
-    G4double fDetectorPhotonAngles[kMaxPhotons];
+    // Counters at calorimeter entrance
+    G4int fCaloEntranceNeutrons;
+    G4int fCaloEntrancePhotons;
+    G4int fCaloEntranceElectrons;
+    G4int fCaloEntrancePositrons;
+    G4double fCaloEntranceEnergy;
     
-    // Neutron histogram storage
-    static const int kMaxNeutrons = 1000;
-    G4double fDetectorNeutronEnergies[kMaxNeutrons];
-    G4double fDetectorNeutronAngles[kMaxNeutrons];
-    G4int fDetectorNeutronCount;
+    // Counters at calorimeter exit
+    G4int fCaloExitNeutrons;
+    G4int fCaloExitPhotons;
+    G4int fCaloExitElectrons;
+    G4int fCaloExitPositrons;
+    G4double fCaloExitEnergy;
     
-    // Electron histogram storage
-    static const int kMaxElectrons = 1000;
-    G4double fDetectorElectronEnergies[kMaxElectrons];
-    G4double fDetectorElectronAngles[kMaxElectrons];
-    G4int fDetectorElectronCount;
+    // Magnet entrance particle storage (using vectors for dynamic sizing)
+    std::vector<G4double> fMagnetEntrancePhotonEnergies;
+    std::vector<G4double> fMagnetEntrancePhotonAngles;
+    std::vector<G4double> fMagnetEntranceNeutronEnergies;
+    std::vector<G4double> fMagnetEntranceNeutronAngles;
+    std::vector<G4double> fMagnetEntranceElectronEnergies;
+    std::vector<G4double> fMagnetEntranceElectronAngles;
+    std::vector<G4double> fMagnetEntrancePositronEnergies;
+    std::vector<G4double> fMagnetEntrancePositronAngles;
     
-    // Positron histogram storage
-    static const int kMaxPositrons = 1000;
-    G4double fDetectorPositronEnergies[kMaxPositrons];
-    G4double fDetectorPositronAngles[kMaxPositrons];
-    G4int fDetectorPositronCount;
+    // Calorimeter entrance particle storage
+    std::vector<G4double> fCaloEntrancePhotonEnergies;
+    std::vector<G4double> fCaloEntrancePhotonAngles;
+    std::vector<G4double> fCaloEntranceNeutronEnergies;
+    std::vector<G4double> fCaloEntranceNeutronAngles;
+    std::vector<G4double> fCaloEntranceElectronEnergies;
+    std::vector<G4double> fCaloEntranceElectronAngles;
+    std::vector<G4double> fCaloEntrancePositronEnergies;
+    std::vector<G4double> fCaloEntrancePositronAngles;
+    
+    // Calorimeter exit particle storage
+    std::vector<G4double> fCaloExitPhotonEnergies;
+    std::vector<G4double> fCaloExitPhotonAngles;
+    std::vector<G4double> fCaloExitNeutronEnergies;
+    std::vector<G4double> fCaloExitNeutronAngles;
+    std::vector<G4double> fCaloExitElectronEnergies;
+    std::vector<G4double> fCaloExitElectronAngles;
+    std::vector<G4double> fCaloExitPositronEnergies;
+    std::vector<G4double> fCaloExitPositronAngles;
 };
 
 DamsaAnalysis* DamsaAnalysis::fInstance = nullptr;
@@ -82,11 +103,15 @@ DamsaAnalysis::DamsaAnalysis()
 : fTargetExitNeutrons(0), fTargetExitPhotons(0),
   fTargetExitElectrons(0), fTargetExitPositrons(0),
   fTargetExitEnergy(0),
-  fDetectorNeutrons(0), fDetectorPhotons(0),
-  fDetectorElectrons(0), fDetectorPositrons(0),
-  fDetectorEnergy(0), fDetectorPhotonEnergyCount(0),
-  fDetectorNeutronCount(0), fDetectorElectronCount(0),
-  fDetectorPositronCount(0)
+  fMagnetEntranceNeutrons(0), fMagnetEntrancePhotons(0),
+  fMagnetEntranceElectrons(0), fMagnetEntrancePositrons(0),
+  fMagnetEntranceEnergy(0),
+  fCaloEntranceNeutrons(0), fCaloEntrancePhotons(0),
+  fCaloEntranceElectrons(0), fCaloEntrancePositrons(0),
+  fCaloEntranceEnergy(0),
+  fCaloExitNeutrons(0), fCaloExitPhotons(0),
+  fCaloExitElectrons(0), fCaloExitPositrons(0),
+  fCaloExitEnergy(0)
 {}
 
 DamsaAnalysis::~DamsaAnalysis()
@@ -102,45 +127,80 @@ void DamsaAnalysis::RecordParticle(const G4String& particleName, G4double energy
         else if(particleName == "e+") fTargetExitPositrons++;
         fTargetExitEnergy += energy;
     }
-    else if(location == "DetectorEntrance") {
+    else if(location == "MagnetEntrance") {
         if(particleName == "neutron") {
-            fDetectorNeutrons++;
-            if(fDetectorNeutronCount < kMaxNeutrons) {
-                fDetectorNeutronEnergies[fDetectorNeutronCount] = energy;
-                fDetectorNeutronAngles[fDetectorNeutronCount] = angle;
-                fDetectorNeutronCount++;
-            }
+            fMagnetEntranceNeutrons++;
+            fMagnetEntranceNeutronEnergies.push_back(energy);
+            fMagnetEntranceNeutronAngles.push_back(angle);
         }
         else if(particleName == "gamma") {
-            fDetectorPhotons++;
-            if(fDetectorPhotonEnergyCount < kMaxPhotons) {
-                fDetectorPhotonEnergies[fDetectorPhotonEnergyCount] = energy;
-                fDetectorPhotonAngles[fDetectorPhotonEnergyCount] = angle;
-                fDetectorPhotonEnergyCount++;
-            }
+            fMagnetEntrancePhotons++;
+            fMagnetEntrancePhotonEnergies.push_back(energy);
+            fMagnetEntrancePhotonAngles.push_back(angle);
         }
         else if(particleName == "e-") {
-            fDetectorElectrons++;
-            if(fDetectorElectronCount < kMaxElectrons) {
-                fDetectorElectronEnergies[fDetectorElectronCount] = energy;
-                fDetectorElectronAngles[fDetectorElectronCount] = angle;
-                fDetectorElectronCount++;
-            }
+            fMagnetEntranceElectrons++;
+            fMagnetEntranceElectronEnergies.push_back(energy);
+            fMagnetEntranceElectronAngles.push_back(angle);
         }
         else if(particleName == "e+") {
-            fDetectorPositrons++;
-            if(fDetectorPositronCount < kMaxPositrons) {
-                fDetectorPositronEnergies[fDetectorPositronCount] = energy;
-                fDetectorPositronAngles[fDetectorPositronCount] = angle;
-                fDetectorPositronCount++;
-            }
+            fMagnetEntrancePositrons++;
+            fMagnetEntrancePositronEnergies.push_back(energy);
+            fMagnetEntrancePositronAngles.push_back(angle);
         }
-        fDetectorEnergy += energy;
+        fMagnetEntranceEnergy += energy;
+    }
+    else if(location == "CaloEntrance") {
+        if(particleName == "neutron") {
+            fCaloEntranceNeutrons++;
+            fCaloEntranceNeutronEnergies.push_back(energy);
+            fCaloEntranceNeutronAngles.push_back(angle);
+        }
+        else if(particleName == "gamma") {
+            fCaloEntrancePhotons++;
+            fCaloEntrancePhotonEnergies.push_back(energy);
+            fCaloEntrancePhotonAngles.push_back(angle);
+        }
+        else if(particleName == "e-") {
+            fCaloEntranceElectrons++;
+            fCaloEntranceElectronEnergies.push_back(energy);
+            fCaloEntranceElectronAngles.push_back(angle);
+        }
+        else if(particleName == "e+") {
+            fCaloEntrancePositrons++;
+            fCaloEntrancePositronEnergies.push_back(energy);
+            fCaloEntrancePositronAngles.push_back(angle);
+        }
+        fCaloEntranceEnergy += energy;
+    }
+    else if(location == "CaloExit") {
+        if(particleName == "neutron") {
+            fCaloExitNeutrons++;
+            fCaloExitNeutronEnergies.push_back(energy);
+            fCaloExitNeutronAngles.push_back(angle);
+        }
+        else if(particleName == "gamma") {
+            fCaloExitPhotons++;
+            fCaloExitPhotonEnergies.push_back(energy);
+            fCaloExitPhotonAngles.push_back(angle);
+        }
+        else if(particleName == "e-") {
+            fCaloExitElectrons++;
+            fCaloExitElectronEnergies.push_back(energy);
+            fCaloExitElectronAngles.push_back(angle);
+        }
+        else if(particleName == "e+") {
+            fCaloExitPositrons++;
+            fCaloExitPositronEnergies.push_back(energy);
+            fCaloExitPositronAngles.push_back(angle);
+        }
+        fCaloExitEnergy += energy;
     }
 }
 
 void DamsaAnalysis::PrintSummary()
 {
+    // Target Exit Summary
     G4cout << "\n=============================================" << G4endl;
     G4cout << "=== Particles EXITING Target ===" << G4endl;
     G4cout << "=============================================" << G4endl;
@@ -150,24 +210,25 @@ void DamsaAnalysis::PrintSummary()
     G4cout << "Positrons:  " << fTargetExitPositrons << G4endl;
     G4cout << "Total Energy: " << fTargetExitEnergy/GeV << " GeV" << G4endl;
     
+    // Magnet Entrance Summary
     G4cout << "\n=============================================" << G4endl;
-    G4cout << "=== Particles ENTERING Detector ===" << G4endl;
+    G4cout << "=== Particles ENTERING Magnet Region ===" << G4endl;
     G4cout << "=============================================" << G4endl;
-    G4cout << "Neutrons:   " << fDetectorNeutrons << G4endl;
-    G4cout << "Photons:    " << fDetectorPhotons << G4endl;
-    G4cout << "Electrons:  " << fDetectorElectrons << G4endl;
-    G4cout << "Positrons:  " << fDetectorPositrons << G4endl;
-    G4cout << "Total Energy: " << fDetectorEnergy/GeV << " GeV" << G4endl;
-    G4cout << "=============================================\n" << G4endl;
-
-    if(fDetectorPhotonEnergyCount > 0) {
-        G4cout << "\n=== Photon Energy Spectrum at Detector Entrance ===" << G4endl;
+    G4cout << "Neutrons:   " << fMagnetEntranceNeutrons << G4endl;
+    G4cout << "Photons:    " << fMagnetEntrancePhotons << G4endl;
+    G4cout << "Electrons:  " << fMagnetEntranceElectrons << G4endl;
+    G4cout << "Positrons:  " << fMagnetEntrancePositrons << G4endl;
+    G4cout << "Total Energy: " << fMagnetEntranceEnergy/GeV << " GeV" << G4endl;
+    
+    // Magnet Entrance Photon Spectrum
+    if(fMagnetEntrancePhotonEnergies.size() > 0) {
+        G4cout << "\n=== Photon Energy Spectrum at Magnet Entrance ===" << G4endl;
         G4double bins[] = {0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 1.0, 2.0, 4.0, 8.0};
         G4int nBins = 9;
-        G4int counts[9] = {0, 0, 0, 0, 0, 0, 0, 0, 0};
+        G4int counts[9] = {0};
         
-        for(G4int i = 0; i < fDetectorPhotonEnergyCount; i++) {
-            G4double E = fDetectorPhotonEnergies[i] / GeV;
+        for(size_t i = 0; i < fMagnetEntrancePhotonEnergies.size(); i++) {
+            G4double E = fMagnetEntrancePhotonEnergies[i] / GeV;
             for(G4int j = 0; j < nBins; j++) {
                 if(E >= bins[j] && E < bins[j+1]) {
                     counts[j]++;
@@ -180,18 +241,18 @@ void DamsaAnalysis::PrintSummary()
             G4cout << "  [" << bins[i] << " - " << bins[i+1] << " GeV]: "
                    << counts[i] << " photons" << G4endl;
         }
-        G4cout << "  Total photons recorded: " << fDetectorPhotonEnergyCount << G4endl;
+        G4cout << "  Total photons: " << fMagnetEntrancePhotonEnergies.size() << G4endl;
     }
     
-    if(fDetectorPhotonEnergyCount > 0) {
-        G4cout << "\n=== Photon Angular Distribution at Detector Entrance ===" << G4endl;
+    // Magnet Entrance Photon Angular Distribution
+    if(fMagnetEntrancePhotonAngles.size() > 0) {
+        G4cout << "\n=== Photon Angular Distribution at Magnet Entrance ===" << G4endl;
         G4double angleBins[] = {0.0, 5.0, 10.0, 20.0, 30.0, 45.0, 60.0, 90.0};
         G4int nAngleBins = 7;
-        G4int angleCounts[7] = {0, 0, 0, 0, 0, 0, 0};
+        G4int angleCounts[7] = {0};
         
-        for(G4int i = 0; i < fDetectorPhotonEnergyCount; i++) {
-            G4double angleDeg = fDetectorPhotonAngles[i] * 180.0 / 3.14159265;
-            
+        for(size_t i = 0; i < fMagnetEntrancePhotonAngles.size(); i++) {
+            G4double angleDeg = fMagnetEntrancePhotonAngles[i] * 180.0 / 3.14159265;
             for(G4int j = 0; j < nAngleBins; j++) {
                 if(angleDeg >= angleBins[j] && angleDeg < angleBins[j+1]) {
                     angleCounts[j]++;
@@ -207,16 +268,15 @@ void DamsaAnalysis::PrintSummary()
         }
     }
     
-    G4cout << "=============================================\n" << G4endl;
-    
-    if(fDetectorNeutronCount > 0) {
-        G4cout << "\n=== Neutron Energy Spectrum at Detector Entrance ===" << G4endl;
+    // Magnet Entrance Neutron Spectrum
+    if(fMagnetEntranceNeutronEnergies.size() > 0) {
+        G4cout << "\n=== Neutron Energy Spectrum at Magnet Entrance ===" << G4endl;
         G4double neutronEnergyBins[] = {0.0, 0.1, 0.5, 1.0, 2.0, 5.0, 10.0, 50.0, 100.0};
         G4int nNeutronEnergyBins = 8;
-        G4int neutronEnergyCounts[8] = {0, 0, 0, 0, 0, 0, 0, 0};
+        G4int neutronEnergyCounts[8] = {0};
         
-        for(G4int i = 0; i < fDetectorNeutronCount; i++) {
-            G4double E = fDetectorNeutronEnergies[i] / GeV;
+        for(size_t i = 0; i < fMagnetEntranceNeutronEnergies.size(); i++) {
+            G4double E = fMagnetEntranceNeutronEnergies[i] / GeV;
             for(G4int j = 0; j < nNeutronEnergyBins; j++) {
                 if(E >= neutronEnergyBins[j] && E < neutronEnergyBins[j+1]) {
                     neutronEnergyCounts[j]++;
@@ -229,37 +289,17 @@ void DamsaAnalysis::PrintSummary()
             G4cout << "  [" << neutronEnergyBins[i] << " - " << neutronEnergyBins[i+1] 
                    << " GeV]: " << neutronEnergyCounts[i] << " neutrons" << G4endl;
         }
-        
-        G4cout << "\n=== Neutron Angular Distribution at Detector Entrance ===" << G4endl;
-        G4double neutronAngleBins[] = {0.0, 5.0, 10.0, 20.0, 30.0, 45.0, 60.0, 90.0};
-        G4int nNeutronAngleBins = 7;
-        G4int neutronAngleCounts[7] = {0, 0, 0, 0, 0, 0, 0};
-        
-        for(G4int i = 0; i < fDetectorNeutronCount; i++) {
-            G4double angleDeg = fDetectorNeutronAngles[i] * 180.0 / 3.14159265;
-            for(G4int j = 0; j < nNeutronAngleBins; j++) {
-                if(angleDeg >= neutronAngleBins[j] && angleDeg < neutronAngleBins[j+1]) {
-                    neutronAngleCounts[j]++;
-                    break;
-                }
-            }
-        }
-        
-        G4cout << "  (Angle relative to beam axis)" << G4endl;
-        for(G4int i = 0; i < nNeutronAngleBins; i++) {
-            G4cout << "  [" << neutronAngleBins[i] << " - " << neutronAngleBins[i+1] 
-                   << " degrees]: " << neutronAngleCounts[i] << " neutrons" << G4endl;
-        }
     }
     
-    if(fDetectorElectronCount > 0) {
-        G4cout << "\n=== Electron Energy Spectrum at Detector Entrance ===" << G4endl;
+    // Magnet Entrance Electron Spectrum
+    if(fMagnetEntranceElectronEnergies.size() > 0) {
+        G4cout << "\n=== Electron Energy Spectrum at Magnet Entrance ===" << G4endl;
         G4double electronEnergyBins[] = {0.0, 0.1, 0.2, 0.5, 1.0, 2.0, 4.0, 8.0};
         G4int nElectronEnergyBins = 7;
-        G4int electronEnergyCounts[7] = {0, 0, 0, 0, 0, 0, 0};
+        G4int electronEnergyCounts[7] = {0};
         
-        for(G4int i = 0; i < fDetectorElectronCount; i++) {
-            G4double E = fDetectorElectronEnergies[i] / GeV;
+        for(size_t i = 0; i < fMagnetEntranceElectronEnergies.size(); i++) {
+            G4double E = fMagnetEntranceElectronEnergies[i] / GeV;
             for(G4int j = 0; j < nElectronEnergyBins; j++) {
                 if(E >= electronEnergyBins[j] && E < electronEnergyBins[j+1]) {
                     electronEnergyCounts[j]++;
@@ -272,37 +312,17 @@ void DamsaAnalysis::PrintSummary()
             G4cout << "  [" << electronEnergyBins[i] << " - " << electronEnergyBins[i+1] 
                    << " GeV]: " << electronEnergyCounts[i] << " electrons" << G4endl;
         }
-        
-        G4cout << "\n=== Electron Angular Distribution at Detector Entrance ===" << G4endl;
-        G4double electronAngleBins[] = {0.0, 5.0, 10.0, 20.0, 30.0, 45.0, 60.0, 90.0};
-        G4int nElectronAngleBins = 7;
-        G4int electronAngleCounts[7] = {0, 0, 0, 0, 0, 0, 0};
-        
-        for(G4int i = 0; i < fDetectorElectronCount; i++) {
-            G4double angleDeg = fDetectorElectronAngles[i] * 180.0 / 3.14159265;
-            for(G4int j = 0; j < nElectronAngleBins; j++) {
-                if(angleDeg >= electronAngleBins[j] && angleDeg < electronAngleBins[j+1]) {
-                    electronAngleCounts[j]++;
-                    break;
-                }
-            }
-        }
-        
-        G4cout << "  (Angle relative to beam axis)" << G4endl;
-        for(G4int i = 0; i < nElectronAngleBins; i++) {
-            G4cout << "  [" << electronAngleBins[i] << " - " << electronAngleBins[i+1] 
-                   << " degrees]: " << electronAngleCounts[i] << " electrons" << G4endl;
-        }
     }
     
-    if(fDetectorPositronCount > 0) {
-        G4cout << "\n=== Positron Energy Spectrum at Detector Entrance ===" << G4endl;
+    // Magnet Entrance Positron Spectrum
+    if(fMagnetEntrancePositronEnergies.size() > 0) {
+        G4cout << "\n=== Positron Energy Spectrum at Magnet Entrance ===" << G4endl;
         G4double positronEnergyBins[] = {0.0, 0.1, 0.2, 0.5, 1.0, 2.0, 4.0, 8.0};
         G4int nPositronEnergyBins = 7;
-        G4int positronEnergyCounts[7] = {0, 0, 0, 0, 0, 0, 0};
+        G4int positronEnergyCounts[7] = {0};
         
-        for(G4int i = 0; i < fDetectorPositronCount; i++) {
-            G4double E = fDetectorPositronEnergies[i] / GeV;
+        for(size_t i = 0; i < fMagnetEntrancePositronEnergies.size(); i++) {
+            G4double E = fMagnetEntrancePositronEnergies[i] / GeV;
             for(G4int j = 0; j < nPositronEnergyBins; j++) {
                 if(E >= positronEnergyBins[j] && E < positronEnergyBins[j+1]) {
                     positronEnergyCounts[j]++;
@@ -315,32 +335,101 @@ void DamsaAnalysis::PrintSummary()
             G4cout << "  [" << positronEnergyBins[i] << " - " << positronEnergyBins[i+1] 
                    << " GeV]: " << positronEnergyCounts[i] << " positrons" << G4endl;
         }
+    }
+    
+    // Calorimeter Entrance Summary
+    G4cout << "\n=============================================" << G4endl;
+    G4cout << "=== Particles ENTERING Calorimeter ===" << G4endl;
+    G4cout << "=============================================" << G4endl;
+    G4cout << "Neutrons:   " << fCaloEntranceNeutrons << G4endl;
+    G4cout << "Photons:    " << fCaloEntrancePhotons << G4endl;
+    G4cout << "Electrons:  " << fCaloEntranceElectrons << G4endl;
+    G4cout << "Positrons:  " << fCaloEntrancePositrons << G4endl;
+    G4cout << "Total Energy: " << fCaloEntranceEnergy/GeV << " GeV" << G4endl;
+    
+    // Calorimeter Entrance Photon Spectrum
+    if(fCaloEntrancePhotonEnergies.size() > 0) {
+        G4cout << "\n=== Photon Energy Spectrum at Calorimeter Entrance ===" << G4endl;
+        G4double bins[] = {0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 1.0, 2.0, 4.0, 8.0};
+        G4int nBins = 9;
+        G4int counts[9] = {0};
         
-        G4cout << "\n=== Positron Angular Distribution at Detector Entrance ===" << G4endl;
-        G4double positronAngleBins[] = {0.0, 5.0, 10.0, 20.0, 30.0, 45.0, 60.0, 90.0};
-        G4int nPositronAngleBins = 7;
-        G4int positronAngleCounts[7] = {0, 0, 0, 0, 0, 0, 0};
-        
-        for(G4int i = 0; i < fDetectorPositronCount; i++) {
-            G4double angleDeg = fDetectorPositronAngles[i] * 180.0 / 3.14159265;
-            for(G4int j = 0; j < nPositronAngleBins; j++) {
-                if(angleDeg >= positronAngleBins[j] && angleDeg < positronAngleBins[j+1]) {
-                    positronAngleCounts[j]++;
+        for(size_t i = 0; i < fCaloEntrancePhotonEnergies.size(); i++) {
+            G4double E = fCaloEntrancePhotonEnergies[i] / GeV;
+            for(G4int j = 0; j < nBins; j++) {
+                if(E >= bins[j] && E < bins[j+1]) {
+                    counts[j]++;
                     break;
                 }
             }
         }
         
-        G4cout << "  (Angle relative to beam axis)" << G4endl;
-        for(G4int i = 0; i < nPositronAngleBins; i++) {
-            G4cout << "  [" << positronAngleBins[i] << " - " << positronAngleBins[i+1] 
-                   << " degrees]: " << positronAngleCounts[i] << " positrons" << G4endl;
+        for(G4int i = 0; i < nBins; i++) {
+            G4cout << "  [" << bins[i] << " - " << bins[i+1] << " GeV]: "
+                   << counts[i] << " photons" << G4endl;
         }
+        G4cout << "  Total photons: " << fCaloEntrancePhotonEnergies.size() << G4endl;
+    }
+    
+    // Calorimeter Entrance Neutron Spectrum
+    if(fCaloEntranceNeutronEnergies.size() > 0) {
+        G4cout << "\n=== Neutron Energy Spectrum at Calorimeter Entrance ===" << G4endl;
+        G4double neutronEnergyBins[] = {0.0, 0.1, 0.5, 1.0, 2.0, 5.0, 10.0, 50.0, 100.0};
+        G4int nNeutronEnergyBins = 8;
+        G4int neutronEnergyCounts[8] = {0};
+        
+        for(size_t i = 0; i < fCaloEntranceNeutronEnergies.size(); i++) {
+            G4double E = fCaloEntranceNeutronEnergies[i] / GeV;
+            for(G4int j = 0; j < nNeutronEnergyBins; j++) {
+                if(E >= neutronEnergyBins[j] && E < neutronEnergyBins[j+1]) {
+                    neutronEnergyCounts[j]++;
+                    break;
+                }
+            }
+        }
+        
+        for(G4int i = 0; i < nNeutronEnergyBins; i++) {
+            G4cout << "  [" << neutronEnergyBins[i] << " - " << neutronEnergyBins[i+1] 
+                   << " GeV]: " << neutronEnergyCounts[i] << " neutrons" << G4endl;
+        }
+    }
+    
+    // Calorimeter Exit Summary
+    G4cout << "\n=============================================" << G4endl;
+    G4cout << "=== Particles EXITING Calorimeter ===" << G4endl;
+    G4cout << "=============================================" << G4endl;
+    G4cout << "Neutrons:   " << fCaloExitNeutrons << G4endl;
+    G4cout << "Photons:    " << fCaloExitPhotons << G4endl;
+    G4cout << "Electrons:  " << fCaloExitElectrons << G4endl;
+    G4cout << "Positrons:  " << fCaloExitPositrons << G4endl;
+    G4cout << "Total Energy: " << fCaloExitEnergy/GeV << " GeV" << G4endl;
+    
+    // Calorimeter Exit Photon Spectrum
+    if(fCaloExitPhotonEnergies.size() > 0) {
+        G4cout << "\n=== Photon Energy Spectrum at Calorimeter Exit ===" << G4endl;
+        G4double bins[] = {0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 1.0, 2.0, 4.0, 8.0};
+        G4int nBins = 9;
+        G4int counts[9] = {0};
+        
+        for(size_t i = 0; i < fCaloExitPhotonEnergies.size(); i++) {
+            G4double E = fCaloExitPhotonEnergies[i] / GeV;
+            for(G4int j = 0; j < nBins; j++) {
+                if(E >= bins[j] && E < bins[j+1]) {
+                    counts[j]++;
+                    break;
+                }
+            }
+        }
+        
+        for(G4int i = 0; i < nBins; i++) {
+            G4cout << "  [" << bins[i] << " - " << bins[i+1] << " GeV]: "
+                   << counts[i] << " photons" << G4endl;
+        }
+        G4cout << "  Total photons: " << fCaloExitPhotonEnergies.size() << G4endl;
     }
     
     G4cout << "=============================================\n" << G4endl;
 }
-
 void DamsaAnalysis::SaveToFile(const G4String& filename)
 {
     mkdir("output", 0755);
@@ -357,6 +446,7 @@ void DamsaAnalysis::SaveToFile(const G4String& filename)
     outFile << "=== DAMSA Background Analysis Results ===" << std::endl;
     outFile << "=============================================" << std::endl << std::endl;
     
+    // Target Exit data
     outFile << "=== Particles EXITING Target ===" << std::endl;
     outFile << "Neutrons:     " << fTargetExitNeutrons << std::endl;
     outFile << "Photons:      " << fTargetExitPhotons << std::endl;
@@ -365,198 +455,32 @@ void DamsaAnalysis::SaveToFile(const G4String& filename)
     outFile << "Total Energy: " << std::fixed << std::setprecision(6) 
             << fTargetExitEnergy/GeV << " GeV" << std::endl << std::endl;
     
-    outFile << "=== Particles ENTERING Detector ===" << std::endl;
-    outFile << "Neutrons:     " << fDetectorNeutrons << std::endl;
-    outFile << "Photons:      " << fDetectorPhotons << std::endl;
-    outFile << "Electrons:    " << fDetectorElectrons << std::endl;
-    outFile << "Positrons:    " << fDetectorPositrons << std::endl;
+    // Magnet Entrance data
+    outFile << "=== Particles ENTERING Magnet ===" << std::endl;
+    outFile << "Neutrons:     " << fMagnetEntranceNeutrons << std::endl;
+    outFile << "Photons:      " << fMagnetEntrancePhotons << std::endl;
+    outFile << "Electrons:    " << fMagnetEntranceElectrons << std::endl;
+    outFile << "Positrons:    " << fMagnetEntrancePositrons << std::endl;
     outFile << "Total Energy: " << std::fixed << std::setprecision(6) 
-            << fDetectorEnergy/GeV << " GeV" << std::endl << std::endl;
+            << fMagnetEntranceEnergy/GeV << " GeV" << std::endl << std::endl;
     
-    // Photon energy spectrum
-    if(fDetectorPhotonEnergyCount > 0) {
-        outFile << "=== Photon Energy Spectrum at Detector Entrance ===" << std::endl;
-        G4double bins[] = {0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 1.0, 2.0, 4.0, 8.0};
-        G4int nBins = 9;
-        G4int counts[9] = {0, 0, 0, 0, 0, 0, 0, 0, 0};
-        
-        for(G4int i = 0; i < fDetectorPhotonEnergyCount; i++) {
-            G4double E = fDetectorPhotonEnergies[i] / GeV;
-            for(G4int j = 0; j < nBins; j++) {
-                if(E >= bins[j] && E < bins[j+1]) {
-                    counts[j]++;
-                    break;
-                }
-            }
-        }
-        
-        for(G4int i = 0; i < nBins; i++) {
-            outFile << "  [" << bins[i] << " - " << bins[i+1] << " GeV]: "
-                    << counts[i] << " photons" << std::endl;
-        }
-        outFile << "  Total photons recorded: " << fDetectorPhotonEnergyCount << std::endl << std::endl;
-        
-        // Photon angular distribution
-        outFile << "=== Photon Angular Distribution at Detector Entrance ===" << std::endl;
-        G4double angleBins[] = {0.0, 5.0, 10.0, 20.0, 30.0, 45.0, 60.0, 90.0};
-        G4int nAngleBins = 7;
-        G4int angleCounts[7] = {0, 0, 0, 0, 0, 0, 0};
-        
-        for(G4int i = 0; i < fDetectorPhotonEnergyCount; i++) {
-            G4double angleDeg = fDetectorPhotonAngles[i] * 180.0 / 3.14159265;
-            for(G4int j = 0; j < nAngleBins; j++) {
-                if(angleDeg >= angleBins[j] && angleDeg < angleBins[j+1]) {
-                    angleCounts[j]++;
-                    break;
-                }
-            }
-        }
-        
-        outFile << "  (Angle relative to beam axis, 0° = straight forward)" << std::endl;
-        for(G4int i = 0; i < nAngleBins; i++) {
-            outFile << "  [" << angleBins[i] << " - " << angleBins[i+1] << " degrees]: " 
-                    << angleCounts[i] << " photons" << std::endl;
-        }
-        outFile << std::endl;
-    }
+    // Calorimeter Entrance data
+    outFile << "=== Particles ENTERING Calorimeter ===" << std::endl;
+    outFile << "Neutrons:     " << fCaloEntranceNeutrons << std::endl;
+    outFile << "Photons:      " << fCaloEntrancePhotons << std::endl;
+    outFile << "Electrons:    " << fCaloEntranceElectrons << std::endl;
+    outFile << "Positrons:    " << fCaloEntrancePositrons << std::endl;
+    outFile << "Total Energy: " << std::fixed << std::setprecision(6) 
+            << fCaloEntranceEnergy/GeV << " GeV" << std::endl << std::endl;
     
-    // Neutron spectra
-    if(fDetectorNeutronCount > 0) {
-        outFile << "=== Neutron Energy Spectrum at Detector Entrance ===" << std::endl;
-        G4double neutronEnergyBins[] = {0.0, 0.1, 0.5, 1.0, 2.0, 5.0, 10.0, 50.0, 100.0};
-        G4int nNeutronEnergyBins = 8;
-        G4int neutronEnergyCounts[8] = {0, 0, 0, 0, 0, 0, 0, 0};
-        
-        for(G4int i = 0; i < fDetectorNeutronCount; i++) {
-            G4double E = fDetectorNeutronEnergies[i] / GeV;
-            for(G4int j = 0; j < nNeutronEnergyBins; j++) {
-                if(E >= neutronEnergyBins[j] && E < neutronEnergyBins[j+1]) {
-                    neutronEnergyCounts[j]++;
-                    break;
-                }
-            }
-        }
-        
-        for(G4int i = 0; i < nNeutronEnergyBins; i++) {
-            outFile << "  [" << neutronEnergyBins[i] << " - " << neutronEnergyBins[i+1] 
-                    << " GeV]: " << neutronEnergyCounts[i] << " neutrons" << std::endl;
-        }
-        outFile << std::endl;
-        
-        outFile << "=== Neutron Angular Distribution at Detector Entrance ===" << std::endl;
-        G4double neutronAngleBins[] = {0.0, 5.0, 10.0, 20.0, 30.0, 45.0, 60.0, 90.0};
-        G4int nNeutronAngleBins = 7;
-        G4int neutronAngleCounts[7] = {0, 0, 0, 0, 0, 0, 0};
-        
-        for(G4int i = 0; i < fDetectorNeutronCount; i++) {
-            G4double angleDeg = fDetectorNeutronAngles[i] * 180.0 / 3.14159265;
-            for(G4int j = 0; j < nNeutronAngleBins; j++) {
-                if(angleDeg >= neutronAngleBins[j] && angleDeg < neutronAngleBins[j+1]) {
-                    neutronAngleCounts[j]++;
-                    break;
-                }
-            }
-        }
-        
-        outFile << "  (Angle relative to beam axis)" << std::endl;
-        for(G4int i = 0; i < nNeutronAngleBins; i++) {
-            outFile << "  [" << neutronAngleBins[i] << " - " << neutronAngleBins[i+1] 
-                    << " degrees]: " << neutronAngleCounts[i] << " neutrons" << std::endl;
-        }
-        outFile << std::endl;
-    }
-    
-    // Electron spectra
-    if(fDetectorElectronCount > 0) {
-        outFile << "=== Electron Energy Spectrum at Detector Entrance ===" << std::endl;
-        G4double electronEnergyBins[] = {0.0, 0.1, 0.2, 0.5, 1.0, 2.0, 4.0, 8.0};
-        G4int nElectronEnergyBins = 7;
-        G4int electronEnergyCounts[7] = {0, 0, 0, 0, 0, 0, 0};
-        
-        for(G4int i = 0; i < fDetectorElectronCount; i++) {
-            G4double E = fDetectorElectronEnergies[i] / GeV;
-            for(G4int j = 0; j < nElectronEnergyBins; j++) {
-                if(E >= electronEnergyBins[j] && E < electronEnergyBins[j+1]) {
-                    electronEnergyCounts[j]++;
-                    break;
-                }
-            }
-        }
-        
-        for(G4int i = 0; i < nElectronEnergyBins; i++) {
-            outFile << "  [" << electronEnergyBins[i] << " - " << electronEnergyBins[i+1] 
-                    << " GeV]: " << electronEnergyCounts[i] << " electrons" << std::endl;
-        }
-        outFile << std::endl;
-        
-        outFile << "=== Electron Angular Distribution at Detector Entrance ===" << std::endl;
-        G4double electronAngleBins[] = {0.0, 5.0, 10.0, 20.0, 30.0, 45.0, 60.0, 90.0};
-        G4int nElectronAngleBins = 7;
-        G4int electronAngleCounts[7] = {0, 0, 0, 0, 0, 0, 0};
-        
-        for(G4int i = 0; i < fDetectorElectronCount; i++) {
-            G4double angleDeg = fDetectorElectronAngles[i] * 180.0 / 3.14159265;
-            for(G4int j = 0; j < nElectronAngleBins; j++) {
-                if(angleDeg >= electronAngleBins[j] && angleDeg < electronAngleBins[j+1]) {
-                    electronAngleCounts[j]++;
-                    break;
-                }
-            }
-        }
-        
-        outFile << "  (Angle relative to beam axis)" << std::endl;
-        for(G4int i = 0; i < nElectronAngleBins; i++) {
-            outFile << "  [" << electronAngleBins[i] << " - " << electronAngleBins[i+1] 
-                    << " degrees]: " << electronAngleCounts[i] << " electrons" << std::endl;
-        }
-        outFile << std::endl;
-    }
-    
-    // Positron spectra
-    if(fDetectorPositronCount > 0) {
-        outFile << "=== Positron Energy Spectrum at Detector Entrance ===" << std::endl;
-        G4double positronEnergyBins[] = {0.0, 0.1, 0.2, 0.5, 1.0, 2.0, 4.0, 8.0};
-        G4int nPositronEnergyBins = 7;
-        G4int positronEnergyCounts[7] = {0, 0, 0, 0, 0, 0, 0};
-        
-        for(G4int i = 0; i < fDetectorPositronCount; i++) {
-            G4double E = fDetectorPositronEnergies[i] / GeV;
-            for(G4int j = 0; j < nPositronEnergyBins; j++) {
-                if(E >= positronEnergyBins[j] && E < positronEnergyBins[j+1]) {
-                    positronEnergyCounts[j]++;
-                    break;
-                }
-            }
-        }
-        
-        for(G4int i = 0; i < nPositronEnergyBins; i++) {
-            outFile << "  [" << positronEnergyBins[i] << " - " << positronEnergyBins[i+1] 
-                    << " GeV]: " << positronEnergyCounts[i] << " positrons" << std::endl;
-        }
-        outFile << std::endl;
-        
-        outFile << "=== Positron Angular Distribution at Detector Entrance ===" << std::endl;
-        G4double positronAngleBins[] = {0.0, 5.0, 10.0, 20.0, 30.0, 45.0, 60.0, 90.0};
-        G4int nPositronAngleBins = 7;
-        G4int positronAngleCounts[7] = {0, 0, 0, 0, 0, 0, 0};
-        
-        for(G4int i = 0; i < fDetectorPositronCount; i++) {
-            G4double angleDeg = fDetectorPositronAngles[i] * 180.0 / 3.14159265;
-            for(G4int j = 0; j < nPositronAngleBins; j++) {
-                if(angleDeg >= positronAngleBins[j] && angleDeg < positronAngleBins[j+1]) {
-                    positronAngleCounts[j]++;
-                    break;
-                }
-            }
-        }
-        
-        outFile << "  (Angle relative to beam axis)" << std::endl;
-        for(G4int i = 0; i < nPositronAngleBins; i++) {
-            outFile << "  [" << positronAngleBins[i] << " - " << positronAngleBins[i+1] 
-                    << " degrees]: " << positronAngleCounts[i] << " positrons" << std::endl;
-        }
-        outFile << std::endl;
-    }
+    // Calorimeter Exit data
+    outFile << "=== Particles EXITING Calorimeter ===" << std::endl;
+    outFile << "Neutrons:     " << fCaloExitNeutrons << std::endl;
+    outFile << "Photons:      " << fCaloExitPhotons << std::endl;
+    outFile << "Electrons:    " << fCaloExitElectrons << std::endl;
+    outFile << "Positrons:    " << fCaloExitPositrons << std::endl;
+    outFile << "Total Energy: " << std::fixed << std::setprecision(6) 
+            << fCaloExitEnergy/GeV << " GeV" << std::endl << std::endl;
     
     outFile << "=============================================" << std::endl;
     outFile.close();
@@ -568,130 +492,238 @@ void DamsaAnalysis::WriteROOTHistograms(const G4String& filename)
 {
     mkdir("plots", 0755);
     
-    std::string rootPath = "plots/" + filename;
-    TFile* rootFile = new TFile(rootPath.c_str(), "RECREATE");
-    
-    if(!rootFile || rootFile->IsZombie()) {
-        G4cout << "ERROR: Could not create ROOT file " << rootPath << G4endl;
-        return;
-    }
-    
     gStyle->SetOptStat(111111);
     gStyle->SetPalette(kRainBow);
     
-    // Photon histograms
-    if(fDetectorPhotonEnergyCount > 0) {
-        TH1D* hPhotonEnergy = new TH1D("hPhotonEnergy", "Photon Energy at Detector;Energy [GeV];Counts", 100, 0, 8);
-        TH1D* hPhotonAngle = new TH1D("hPhotonAngle", "Photon Angle at Detector;Angle [degrees];Counts", 90, 0, 90);
-        
-        for(G4int i = 0; i < fDetectorPhotonEnergyCount; i++) {
-            hPhotonEnergy->Fill(fDetectorPhotonEnergies[i] / GeV);
-            hPhotonAngle->Fill(fDetectorPhotonAngles[i] * 180.0 / 3.14159265);
+    // Create separate ROOT file for Magnet Entrance
+    std::string magnetPath = "plots/magnetentrance_histograms.root";
+    TFile* magnetFile = new TFile(magnetPath.c_str(), "RECREATE");
+    
+    if(!magnetFile || magnetFile->IsZombie()) {
+        G4cout << "ERROR: Could not create ROOT file " << magnetPath << G4endl;
+    } else {
+        // Photon histograms - Magnet Entrance
+        if(fMagnetEntrancePhotonEnergies.size() > 0) {
+            TH1D* hPhotonEnergy = new TH1D("hPhotonEnergy", "Photon Energy at Magnet Entrance;Energy [GeV];Counts", 100, 0, 8);
+            TH1D* hPhotonAngle = new TH1D("hPhotonAngle", "Photon Angle at Magnet Entrance;Angle [degrees];Counts", 90, 0, 90);
+            
+            for(size_t i = 0; i < fMagnetEntrancePhotonEnergies.size(); i++) {
+                hPhotonEnergy->Fill(fMagnetEntrancePhotonEnergies[i] / GeV);
+                hPhotonAngle->Fill(fMagnetEntrancePhotonAngles[i] * 180.0 / 3.14159265);
+            }
+            
+            hPhotonEnergy->Write();
+            hPhotonAngle->Write();
+            delete hPhotonEnergy;
+            delete hPhotonAngle;
         }
         
-        TCanvas* c1 = new TCanvas("c1", "Photon Energy", 800, 600);
-        hPhotonEnergy->Draw();
-        c1->SaveAs(("plots/photon_energy_" + filename.substr(0, filename.find(".root")) + ".png").c_str());
-        delete c1;
-        
-        TCanvas* c2 = new TCanvas("c2", "Photon Angle", 800, 600);
-        hPhotonAngle->Draw();
-        c2->SaveAs(("plots/photon_angle_" + filename.substr(0, filename.find(".root")) + ".png").c_str());
-        delete c2;
-        
-        rootFile->cd();
-        hPhotonEnergy->Write();
-        hPhotonAngle->Write();
-        delete hPhotonEnergy;
-        delete hPhotonAngle;
-    }
-    
-    // Neutron histograms
-    if(fDetectorNeutronCount > 0) {
-        TH1D* hNeutronEnergy = new TH1D("hNeutronEnergy", "Neutron Energy at Detector;Energy [GeV];Counts", 100, 0, 100);
-        TH1D* hNeutronAngle = new TH1D("hNeutronAngle", "Neutron Angle at Detector;Angle [degrees];Counts", 90, 0, 90);
-        
-        for(G4int i = 0; i < fDetectorNeutronCount; i++) {
-            hNeutronEnergy->Fill(fDetectorNeutronEnergies[i] / GeV);
-            hNeutronAngle->Fill(fDetectorNeutronAngles[i] * 180.0 / 3.14159265);
+        // Neutron histograms - Magnet Entrance
+        if(fMagnetEntranceNeutronEnergies.size() > 0) {
+            TH1D* hNeutronEnergy = new TH1D("hNeutronEnergy", "Neutron Energy at Magnet Entrance;Energy [GeV];Counts", 100, 0, 100);
+            TH1D* hNeutronAngle = new TH1D("hNeutronAngle", "Neutron Angle at Magnet Entrance;Angle [degrees];Counts", 90, 0, 90);
+            
+            for(size_t i = 0; i < fMagnetEntranceNeutronEnergies.size(); i++) {
+                hNeutronEnergy->Fill(fMagnetEntranceNeutronEnergies[i] / GeV);
+                hNeutronAngle->Fill(fMagnetEntranceNeutronAngles[i] * 180.0 / 3.14159265);
+            }
+            
+            hNeutronEnergy->Write();
+            hNeutronAngle->Write();
+            delete hNeutronEnergy;
+            delete hNeutronAngle;
         }
         
-        TCanvas* c3 = new TCanvas("c3", "Neutron Energy", 800, 600);
-        c3->SetLogy();
-        hNeutronEnergy->Draw();
-        c3->SaveAs(("plots/neutron_energy_" + filename.substr(0, filename.find(".root")) + ".png").c_str());
-        delete c3;
-        
-        TCanvas* c4 = new TCanvas("c4", "Neutron Angle", 800, 600);
-        hNeutronAngle->Draw();
-        c4->SaveAs(("plots/neutron_angle_" + filename.substr(0, filename.find(".root")) + ".png").c_str());
-        delete c4;
-        
-        rootFile->cd();
-        hNeutronEnergy->Write();
-        hNeutronAngle->Write();
-        delete hNeutronEnergy;
-        delete hNeutronAngle;
-    }
-    
-    // Electron histograms
-    if(fDetectorElectronCount > 0) {
-        TH1D* hElectronEnergy = new TH1D("hElectronEnergy", "Electron Energy at Detector;Energy [GeV];Counts", 100, 0, 8);
-        TH1D* hElectronAngle = new TH1D("hElectronAngle", "Electron Angle at Detector;Angle [degrees];Counts", 90, 0, 90);
-        
-        for(G4int i = 0; i < fDetectorElectronCount; i++) {
-            hElectronEnergy->Fill(fDetectorElectronEnergies[i] / GeV);
-            hElectronAngle->Fill(fDetectorElectronAngles[i] * 180.0 / 3.14159265);
+        // Electron histograms - Magnet Entrance
+        if(fMagnetEntranceElectronEnergies.size() > 0) {
+            TH1D* hElectronEnergy = new TH1D("hElectronEnergy", "Electron Energy at Magnet Entrance;Energy [GeV];Counts", 100, 0, 8);
+            TH1D* hElectronAngle = new TH1D("hElectronAngle", "Electron Angle at Magnet Entrance;Angle [degrees];Counts", 90, 0, 90);
+            
+            for(size_t i = 0; i < fMagnetEntranceElectronEnergies.size(); i++) {
+                hElectronEnergy->Fill(fMagnetEntranceElectronEnergies[i] / GeV);
+                hElectronAngle->Fill(fMagnetEntranceElectronAngles[i] * 180.0 / 3.14159265);
+            }
+            
+            hElectronEnergy->Write();
+            hElectronAngle->Write();
+            delete hElectronEnergy;
+            delete hElectronAngle;
         }
         
-        TCanvas* c5 = new TCanvas("c5", "Electron Energy", 800, 600);
-        hElectronEnergy->Draw();
-        c5->SaveAs(("plots/electron_energy_" + filename.substr(0, filename.find(".root")) + ".png").c_str());
-        delete c5;
-        
-        TCanvas* c6 = new TCanvas("c6", "Electron Angle", 800, 600);
-        hElectronAngle->Draw();
-        c6->SaveAs(("plots/electron_angle_" + filename.substr(0, filename.find(".root")) + ".png").c_str());
-        delete c6;
-        
-        rootFile->cd();
-        hElectronEnergy->Write();
-        hElectronAngle->Write();
-        delete hElectronEnergy;
-        delete hElectronAngle;
-    }
-    
-    // Positron histograms
-    if(fDetectorPositronCount > 0) {
-        TH1D* hPositronEnergy = new TH1D("hPositronEnergy", "Positron Energy at Detector;Energy [GeV];Counts", 100, 0, 8);
-        TH1D* hPositronAngle = new TH1D("hPositronAngle", "Positron Angle at Detector;Angle [degrees];Counts", 90, 0, 90);
-        
-        for(G4int i = 0; i < fDetectorPositronCount; i++) {
-            hPositronEnergy->Fill(fDetectorPositronEnergies[i] / GeV);
-            hPositronAngle->Fill(fDetectorPositronAngles[i] * 180.0 / 3.14159265);
+        // Positron histograms - Magnet Entrance
+        if(fMagnetEntrancePositronEnergies.size() > 0) {
+            TH1D* hPositronEnergy = new TH1D("hPositronEnergy", "Positron Energy at Magnet Entrance;Energy [GeV];Counts", 100, 0, 8);
+            TH1D* hPositronAngle = new TH1D("hPositronAngle", "Positron Angle at Magnet Entrance;Angle [degrees];Counts", 90, 0, 90);
+            
+            for(size_t i = 0; i < fMagnetEntrancePositronEnergies.size(); i++) {
+                hPositronEnergy->Fill(fMagnetEntrancePositronEnergies[i] / GeV);
+                hPositronAngle->Fill(fMagnetEntrancePositronAngles[i] * 180.0 / 3.14159265);
+            }
+            
+            hPositronEnergy->Write();
+            hPositronAngle->Write();
+            delete hPositronEnergy;
+            delete hPositronAngle;
         }
         
-        TCanvas* c7 = new TCanvas("c7", "Positron Energy", 800, 600);
-        hPositronEnergy->Draw();
-        c7->SaveAs(("plots/positron_energy_" + filename.substr(0, filename.find(".root")) + ".png").c_str());
-        delete c7;
-        
-        TCanvas* c8 = new TCanvas("c8", "Positron Angle", 800, 600);
-        hPositronAngle->Draw();
-        c8->SaveAs(("plots/positron_angle_" + filename.substr(0, filename.find(".root")) + ".png").c_str());
-        delete c8;
-        
-        rootFile->cd();
-        hPositronEnergy->Write();
-        hPositronAngle->Write();
-        delete hPositronEnergy;
-        delete hPositronAngle;
+        magnetFile->Close();
+        delete magnetFile;
+        G4cout << "Magnet Entrance histograms saved to: " << magnetPath << G4endl;
     }
     
-    rootFile->Close();
-    delete rootFile;
+    // Create separate ROOT file for Calorimeter Entrance
+    std::string caloEntrancePath = "plots/caloentrance_histograms.root";
+    TFile* caloEntranceFile = new TFile(caloEntrancePath.c_str(), "RECREATE");
     
-    G4cout << "ROOT histograms and plots saved to plots/ directory" << G4endl;
+    if(!caloEntranceFile || caloEntranceFile->IsZombie()) {
+        G4cout << "ERROR: Could not create ROOT file " << caloEntrancePath << G4endl;
+    } else {
+        // Photon histograms - Calo Entrance
+        if(fCaloEntrancePhotonEnergies.size() > 0) {
+            TH1D* hPhotonEnergy = new TH1D("hPhotonEnergy", "Photon Energy at Calorimeter Entrance;Energy [GeV];Counts", 100, 0, 8);
+            TH1D* hPhotonAngle = new TH1D("hPhotonAngle", "Photon Angle at Calorimeter Entrance;Angle [degrees];Counts", 90, 0, 90);
+            
+            for(size_t i = 0; i < fCaloEntrancePhotonEnergies.size(); i++) {
+                hPhotonEnergy->Fill(fCaloEntrancePhotonEnergies[i] / GeV);
+                hPhotonAngle->Fill(fCaloEntrancePhotonAngles[i] * 180.0 / 3.14159265);
+            }
+            
+            hPhotonEnergy->Write();
+            hPhotonAngle->Write();
+            delete hPhotonEnergy;
+            delete hPhotonAngle;
+        }
+        
+        // Neutron histograms - Calo Entrance
+        if(fCaloEntranceNeutronEnergies.size() > 0) {
+            TH1D* hNeutronEnergy = new TH1D("hNeutronEnergy", "Neutron Energy at Calorimeter Entrance;Energy [GeV];Counts", 100, 0, 100);
+            TH1D* hNeutronAngle = new TH1D("hNeutronAngle", "Neutron Angle at Calorimeter Entrance;Angle [degrees];Counts", 90, 0, 90);
+            
+            for(size_t i = 0; i < fCaloEntranceNeutronEnergies.size(); i++) {
+                hNeutronEnergy->Fill(fCaloEntranceNeutronEnergies[i] / GeV);
+                hNeutronAngle->Fill(fCaloEntranceNeutronAngles[i] * 180.0 / 3.14159265);
+            }
+            
+            hNeutronEnergy->Write();
+            hNeutronAngle->Write();
+            delete hNeutronEnergy;
+            delete hNeutronAngle;
+        }
+        
+        // Electron histograms - Calo Entrance
+        if(fCaloEntranceElectronEnergies.size() > 0) {
+            TH1D* hElectronEnergy = new TH1D("hElectronEnergy", "Electron Energy at Calorimeter Entrance;Energy [GeV];Counts", 100, 0, 8);
+            TH1D* hElectronAngle = new TH1D("hElectronAngle", "Electron Angle at Calorimeter Entrance;Angle [degrees];Counts", 90, 0, 90);
+            
+            for(size_t i = 0; i < fCaloEntranceElectronEnergies.size(); i++) {
+                hElectronEnergy->Fill(fCaloEntranceElectronEnergies[i] / GeV);
+                hElectronAngle->Fill(fCaloEntranceElectronAngles[i] * 180.0 / 3.14159265);
+            }
+            
+            hElectronEnergy->Write();
+            hElectronAngle->Write();
+            delete hElectronEnergy;
+            delete hElectronAngle;
+        }
+        
+        // Positron histograms - Calo Entrance
+        if(fCaloEntrancePositronEnergies.size() > 0) {
+            TH1D* hPositronEnergy = new TH1D("hPositronEnergy", "Positron Energy at Calorimeter Entrance;Energy [GeV];Counts", 100, 0, 8);
+            TH1D* hPositronAngle = new TH1D("hPositronAngle", "Positron Angle at Calorimeter Entrance;Angle [degrees];Counts", 90, 0, 90);
+            
+            for(size_t i = 0; i < fCaloEntrancePositronEnergies.size(); i++) {
+                hPositronEnergy->Fill(fCaloEntrancePositronEnergies[i] / GeV);
+                hPositronAngle->Fill(fCaloEntrancePositronAngles[i] * 180.0 / 3.14159265);
+            }
+            
+            hPositronEnergy->Write();
+            hPositronAngle->Write();
+            delete hPositronEnergy;
+            delete hPositronAngle;
+        }
+        
+        caloEntranceFile->Close();
+        delete caloEntranceFile;
+        G4cout << "Calorimeter Entrance histograms saved to: " << caloEntrancePath << G4endl;
+    }
+    
+    // Create separate ROOT file for Calorimeter Exit
+    std::string caloExitPath = "plots/caloexit_histograms.root";
+    TFile* caloExitFile = new TFile(caloExitPath.c_str(), "RECREATE");
+    
+    if(!caloExitFile || caloExitFile->IsZombie()) {
+        G4cout << "ERROR: Could not create ROOT file " << caloExitPath << G4endl;
+    } else {
+        // Photon histograms - Calo Exit
+        if(fCaloExitPhotonEnergies.size() > 0) {
+            TH1D* hPhotonEnergy = new TH1D("hPhotonEnergy", "Photon Energy at Calorimeter Exit;Energy [GeV];Counts", 100, 0, 8);
+            TH1D* hPhotonAngle = new TH1D("hPhotonAngle", "Photon Angle at Calorimeter Exit;Angle [degrees];Counts", 90, 0, 90);
+            
+            for(size_t i = 0; i < fCaloExitPhotonEnergies.size(); i++) {
+                hPhotonEnergy->Fill(fCaloExitPhotonEnergies[i] / GeV);
+                hPhotonAngle->Fill(fCaloExitPhotonAngles[i] * 180.0 / 3.14159265);
+            }
+            
+            hPhotonEnergy->Write();
+            hPhotonAngle->Write();
+            delete hPhotonEnergy;
+            delete hPhotonAngle;
+        }
+        
+        // Neutron histograms - Calo Exit
+        if(fCaloExitNeutronEnergies.size() > 0) {
+            TH1D* hNeutronEnergy = new TH1D("hNeutronEnergy", "Neutron Energy at Calorimeter Exit;Energy [GeV];Counts", 100, 0, 100);
+            TH1D* hNeutronAngle = new TH1D("hNeutronAngle", "Neutron Angle at Calorimeter Exit;Angle [degrees];Counts", 90, 0, 90);
+            
+            for(size_t i = 0; i < fCaloExitNeutronEnergies.size(); i++) {
+                hNeutronEnergy->Fill(fCaloExitNeutronEnergies[i] / GeV);
+                hNeutronAngle->Fill(fCaloExitNeutronAngles[i] * 180.0 / 3.14159265);
+            }
+            
+            hNeutronEnergy->Write();
+            hNeutronAngle->Write();
+            delete hNeutronEnergy;
+            delete hNeutronAngle;
+        }
+        
+        // Electron histograms - Calo Exit
+        if(fCaloExitElectronEnergies.size() > 0) {
+            TH1D* hElectronEnergy = new TH1D("hElectronEnergy", "Electron Energy at Calorimeter Exit;Energy [GeV];Counts", 100, 0, 8);
+            TH1D* hElectronAngle = new TH1D("hElectronAngle", "Electron Angle at Calorimeter Exit;Angle [degrees];Counts", 90, 0, 90);
+            
+            for(size_t i = 0; i < fCaloExitElectronEnergies.size(); i++) {
+                hElectronEnergy->Fill(fCaloExitElectronEnergies[i] / GeV);
+                hElectronAngle->Fill(fCaloExitElectronAngles[i] * 180.0 / 3.14159265);
+            }
+            
+            hElectronEnergy->Write();
+            hElectronAngle->Write();
+            delete hElectronEnergy;
+            delete hElectronAngle;
+        }
+        
+        // Positron histograms - Calo Exit
+        if(fCaloExitPositronEnergies.size() > 0) {
+            TH1D* hPositronEnergy = new TH1D("hPositronEnergy", "Positron Energy at Calorimeter Exit;Energy [GeV];Counts", 100, 0, 8);
+            TH1D* hPositronAngle = new TH1D("hPositronAngle", "Positron Angle at Calorimeter Exit;Angle [degrees];Counts", 90, 0, 90);
+            
+            for(size_t i = 0; i < fCaloExitPositronEnergies.size(); i++) {
+                hPositronEnergy->Fill(fCaloExitPositronEnergies[i] / GeV);
+                hPositronAngle->Fill(fCaloExitPositronAngles[i] * 180.0 / 3.14159265);
+            }
+            
+            hPositronEnergy->Write();
+            hPositronAngle->Write();
+            delete hPositronEnergy;
+            delete hPositronAngle;
+        }
+        
+        caloExitFile->Close();
+        delete caloExitFile;
+        G4cout << "Calorimeter Exit histograms saved to: " << caloExitPath << G4endl;
+    }
+    
+    G4cout << "All ROOT histograms saved to plots/ directory" << G4endl;
 }
 
 void DamsaAnalysis::Reset()
@@ -702,15 +734,47 @@ void DamsaAnalysis::Reset()
     fTargetExitPositrons = 0;
     fTargetExitEnergy = 0;
     
-    fDetectorNeutrons = 0;
-    fDetectorPhotons = 0;
-    fDetectorElectrons = 0;
-    fDetectorPositrons = 0;
-    fDetectorEnergy = 0;
-    fDetectorPhotonEnergyCount = 0;
-    fDetectorNeutronCount = 0;
-    fDetectorElectronCount = 0;
-    fDetectorPositronCount = 0;
+    fMagnetEntranceNeutrons = 0;
+    fMagnetEntrancePhotons = 0;
+    fMagnetEntranceElectrons = 0;
+    fMagnetEntrancePositrons = 0;
+    fMagnetEntranceEnergy = 0;
+    fMagnetEntrancePhotonEnergies.clear();
+    fMagnetEntrancePhotonAngles.clear();
+    fMagnetEntranceNeutronEnergies.clear();
+    fMagnetEntranceNeutronAngles.clear();
+    fMagnetEntranceElectronEnergies.clear();
+    fMagnetEntranceElectronAngles.clear();
+    fMagnetEntrancePositronEnergies.clear();
+    fMagnetEntrancePositronAngles.clear();
+    
+    fCaloEntranceNeutrons = 0;
+    fCaloEntrancePhotons = 0;
+    fCaloEntranceElectrons = 0;
+    fCaloEntrancePositrons = 0;
+    fCaloEntranceEnergy = 0;
+    fCaloEntrancePhotonEnergies.clear();
+    fCaloEntrancePhotonAngles.clear();
+    fCaloEntranceNeutronEnergies.clear();
+    fCaloEntranceNeutronAngles.clear();
+    fCaloEntranceElectronEnergies.clear();
+    fCaloEntranceElectronAngles.clear();
+    fCaloEntrancePositronEnergies.clear();
+    fCaloEntrancePositronAngles.clear();
+    
+    fCaloExitNeutrons = 0;
+    fCaloExitPhotons = 0;
+    fCaloExitElectrons = 0;
+    fCaloExitPositrons = 0;
+    fCaloExitEnergy = 0;
+    fCaloExitPhotonEnergies.clear();
+    fCaloExitPhotonAngles.clear();
+    fCaloExitNeutronEnergies.clear();
+    fCaloExitNeutronAngles.clear();
+    fCaloExitElectronEnergies.clear();
+    fCaloExitElectronAngles.clear();
+    fCaloExitPositronEnergies.clear();
+    fCaloExitPositronAngles.clear();
 }
 
 #endif

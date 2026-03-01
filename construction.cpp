@@ -83,18 +83,6 @@ void DamsaDetectorConstruction::BuildTarget(G4LogicalVolume* worldLV, G4double& 
     auto* tungstenVis = new G4VisAttributes(G4Colour(0.3, 0.3, 0.3, 1.0));
     tungstenVis->SetForceSolid(true);
     logicTungsten->SetVisAttributes(tungstenVis);
-
-    // Target exit scoring volume
-    auto* solidScoringTarget = new G4Box("solidScoringTarget", fTargetX/2.0, fTargetY/2.0, 0.1*mm);
-    auto* logicScoringTarget = new G4LogicalVolume(solidScoringTarget, 
-                                                   fMatVacuum, 
-                                                   "logicScoringTarget");
-    auto* scoringVis = new G4VisAttributes(G4Colour(1.0, 1.0, 1.0, 1.0));
-    scoringVis->SetForceSolid(true);
-    logicScoringTarget->SetVisAttributes(scoringVis);
-    // logicScoringTarget->SetVisAttributes(G4VisAttributes::GetInvisible());
-    new G4PVPlacement(0, G4ThreeVector(0., 0., zPos + 0.1*mm), 
-                      logicScoringTarget, "physScoringVolumeTarget", worldLV, false, 0, true);
 }
 
 void DamsaDetectorConstruction::BuildVacuumChamber(G4LogicalVolume* worldLV, G4double& zPos)
@@ -127,6 +115,25 @@ void DamsaDetectorConstruction::BuildVacuumChamber(G4LogicalVolume* worldLV, G4d
 
     auto* logicChamberVacuum = new G4LogicalVolume(solidChamberInner, fMatVacuum, "logicChamberVacuum");
     logicChamberVacuum->SetVisAttributes(G4VisAttributes::GetInvisible());
+
+    // Target exit scoring volume (placed inside vacuum chamber)
+    // Target rear face is at zPos (current value), scoring plane 0.1mm after
+    G4double targetExitZ_absolute = zPos + 0.1*mm;
+    G4double chamberCenterZ_absolute = zPos + fChamberLength/2.;  // Chamber will be centered here
+    G4double targetExitZ_local = targetExitZ_absolute - chamberCenterZ_absolute;  // Local Z in chamber frame
+    
+    auto* solidScoringTarget = new G4Box("solidScoringTarget", fTargetX/2.0, fTargetY/2.0, 0.1*mm);
+    auto* logicScoringTarget = new G4LogicalVolume(solidScoringTarget, 
+                                                   fMatVacuum, 
+                                                   "logicScoringTarget");
+    auto* scoringVis = new G4VisAttributes(G4Colour(1.0, 1.0, 1.0, 1.0));
+    scoringVis->SetForceSolid(true);
+    logicScoringTarget->SetVisAttributes(scoringVis);
+    // logicScoringTarget->SetVisAttributes(G4VisAttributes::GetInvisible());
+    
+    // Place scoring plane inside vacuum chamber volume
+    new G4PVPlacement(0, G4ThreeVector(0., 0., targetExitZ_local), 
+                      logicScoringTarget, "physScoringVolumeTarget", logicChamberVacuum, false, 0, true);
 
     zPos += fChamberLength/2.;
     new G4PVPlacement(0, G4ThreeVector(0., 0., zPos), logicChamberWall, "physChamberWall", worldLV, false, 0, true);
@@ -161,19 +168,22 @@ void DamsaDetectorConstruction::BuildMagnetAndTrackerRegion(G4LogicalVolume* wor
     // logicMagnet->SetVisAttributes(magnetVis);
     // new G4PVPlacement(0, G4ThreeVector(0., 0., zPos), logicMagnet, "physMagnet", worldLV, false, 0, true);
 
-    // Detector entrance scoring volume
+    // Magnet entrance scoring volume
     G4double hollowHalfZ = fMagnetOuterSize/2.;
 
-    G4double scoringHalfThickness = 0.01*mm;  // Thin to minimize multiple steps
-    auto* solidScoringDetector = new G4Box("solidScoringDetector", 4.45*cm, 4.45*cm, scoringHalfThickness);
-    auto* logicScoringDetector = new G4LogicalVolume(solidScoringDetector,
-                                                     fMatVacuum,
-                                                     "logicScoringDetector");
-    logicScoringDetector->SetVisAttributes(G4VisAttributes::GetInvisible());
+    G4double scoringHalfThickness = 0.05*mm;  // Match reference implementation (0.1mm total thickness)
+    auto* solidScoringMagnetEntrance = new G4Box("solidScoringMagnetEntrance", 4.45*cm, 4.45*cm, scoringHalfThickness);
+    fLogicScoringMagnetEntrance = new G4LogicalVolume(solidScoringMagnetEntrance,
+                                                      fMatVacuum,
+                                                      "logicScoringMagnetEntrance");
+    auto* scoringVis = new G4VisAttributes(G4Colour(1.0, 1.0, 1.0, 1.0));
+    scoringVis->SetForceSolid(true);
+    fLogicScoringMagnetEntrance->SetVisAttributes(scoringVis);
+    // fLogicScoringMagnetEntrance->SetVisAttributes(G4VisAttributes::GetInvisible());
 
     G4double scoringZ = -hollowHalfZ + scoringHalfThickness + 0.1*mm;  // 0.1mm clearance
     new G4PVPlacement(0, G4ThreeVector(0., 0., scoringZ),
-                      logicScoringDetector, "physScoringVolumeDetector", 
+                      fLogicScoringMagnetEntrance, "physScoringMagnetEntrance", 
                       fLogicMagnetHollow, false, 0, true);
 
     G4double zClearance = 0.7*mm;  // Clearance for scoring volume and boundary
@@ -201,6 +211,32 @@ void DamsaDetectorConstruction::BuildMagnetAndTrackerRegion(G4LogicalVolume* wor
 void DamsaDetectorConstruction::BuildCalorimeter(G4LogicalVolume* worldLV, G4double& zPos)
 {
     G4double ecalDepth = fNumCaloLayers * fLayerThickness;
+    G4double scoringHalfThickness = 0.05*mm;  // Match reference implementation (0.1mm total thickness)
+    
+    // Scoring plane at calorimeter entrance (BEFORE ECAL, in worldLV)
+    auto* solidScoringCaloEntrance = new G4Box("solidScoringCaloEntrance", fCaloSizeXY/2., fCaloSizeXY/2., scoringHalfThickness);
+    fLogicScoringCaloEntrance = new G4LogicalVolume(solidScoringCaloEntrance,
+                                                    fMatVacuum,
+                                                    "logicScoringCaloEntrance");
+    auto* scoringEntranceVis = new G4VisAttributes(G4Colour(0.0, 1.0, 0.0, 1.0));
+    scoringEntranceVis->SetForceSolid(true);
+    fLogicScoringCaloEntrance->SetVisAttributes(scoringEntranceVis);
+    // fLogicScoringCaloEntrance->SetVisAttributes(G4VisAttributes::GetInvisible());
+    
+    // Place entrance scoring plane just BEFORE ECAL front face (in worldLV, with clearance from magnet)
+    // Magnet ends at zPos, so place scoring BEFORE zPos with extra clearance
+    G4double caloEntranceZ = zPos - 1.0*mm - scoringHalfThickness;
+    new G4PVPlacement(0, G4ThreeVector(0., 0., caloEntranceZ),
+                      fLogicScoringCaloEntrance, "physScoringCaloEntrance",
+                      worldLV, false, 0, true);
+    
+    G4cout << "\n=== CALORIMETER ENTRANCE SCORING GEOMETRY ===" << G4endl;
+    G4cout << "ECAL depth: " << ecalDepth/cm << " cm" << G4endl;
+    G4cout << "ECAL will be centered at absolute Z: " << (zPos + ecalDepth/2.)/cm << " cm" << G4endl;
+    G4cout << "ECAL front face absolute Z: " << zPos/cm << " cm" << G4endl;
+    G4cout << "Calo entrance scoring absolute Z: " << caloEntranceZ/cm << " cm" << G4endl;
+
+    // Create ECAL container
     auto* solidECAL = new G4Box("solidECAL", fCaloSizeXY/2., fCaloSizeXY/2., ecalDepth/2.);
     auto* logicECAL = new G4LogicalVolume(solidECAL, fMatAir, "logicECAL");
     logicECAL->SetVisAttributes(G4VisAttributes::GetInvisible());
@@ -237,9 +273,29 @@ void DamsaDetectorConstruction::BuildCalorimeter(G4LogicalVolume* worldLV, G4dou
         }
     }
 
-    zPos += ecalDepth/2.;
+    // Scoring plane at calorimeter exit (AFTER ECAL, in worldLV)
+    auto* solidScoringCaloExit = new G4Box("solidScoringCaloExit", fCaloSizeXY/2., fCaloSizeXY/2., scoringHalfThickness);
+    fLogicScoringCaloExit = new G4LogicalVolume(solidScoringCaloExit,
+                                                fMatVacuum,
+                                                "logicScoringCaloExit");
+    auto* scoringExitVis = new G4VisAttributes(G4Colour(1.0, 0.0, 0.0, 1.0));
+    scoringExitVis->SetForceSolid(true);
+    fLogicScoringCaloExit->SetVisAttributes(scoringExitVis);
+    // fLogicScoringCaloExit->SetVisAttributes(G4VisAttributes::GetInvisible());
+    
+    // Place ECAL in world AFTER magnet region
+    zPos += ecalDepth/2.;  // Move to center of ECAL
     new G4PVPlacement(0, G4ThreeVector(0., 0., zPos), logicECAL, "physECAL", worldLV, false, 0, true);
-    zPos += ecalDepth/2.;
+    zPos += ecalDepth/2.;  // Move to end of ECAL
+    
+    // Place exit scoring plane just AFTER ECAL back face (in worldLV)
+    G4double caloExitZ = zPos + 0.1*mm + scoringHalfThickness;
+    new G4PVPlacement(0, G4ThreeVector(0., 0., caloExitZ),
+                      fLogicScoringCaloExit, "physScoringCaloExit",
+                      worldLV, false, 0, true);
+    
+    G4cout << "ECAL back face absolute Z: " << zPos/cm << " cm" << G4endl;
+    G4cout << "Calo exit scoring absolute Z: " << caloExitZ/cm << " cm" << G4endl;
 }
 
 void DamsaDetectorConstruction::ConstructSDandField()
@@ -267,6 +323,40 @@ void DamsaDetectorConstruction::ConstructSDandField()
     calorimeterSD->RegisterPrimitive(caloNofSecondary);
 
     fLogicCrystal->SetSensitiveDetector(calorimeterSD);
+
+    // Scoring volume sensitive detectors
+    auto* scoringMagnetEntranceSD = new G4MultiFunctionalDetector("ScoringMagnetEntranceSD");
+    sdManager->AddNewDetector(scoringMagnetEntranceSD);
+    
+    auto* scoringMagnetEntranceEnergyDep = new G4PSEnergyDeposit("EnergyDeposit");
+    scoringMagnetEntranceSD->RegisterPrimitive(scoringMagnetEntranceEnergyDep);
+    
+    auto* scoringMagnetEntranceNofSecondary = new G4PSNofSecondary("NofSecondary");
+    scoringMagnetEntranceSD->RegisterPrimitive(scoringMagnetEntranceNofSecondary);
+    
+    fLogicScoringMagnetEntrance->SetSensitiveDetector(scoringMagnetEntranceSD);
+
+    auto* scoringCaloEntranceSD = new G4MultiFunctionalDetector("ScoringCaloEntranceSD");
+    sdManager->AddNewDetector(scoringCaloEntranceSD);
+    
+    auto* scoringCaloEntranceEnergyDep = new G4PSEnergyDeposit("EnergyDeposit");
+    scoringCaloEntranceSD->RegisterPrimitive(scoringCaloEntranceEnergyDep);
+    
+    auto* scoringCaloEntranceNofSecondary = new G4PSNofSecondary("NofSecondary");
+    scoringCaloEntranceSD->RegisterPrimitive(scoringCaloEntranceNofSecondary);
+    
+    fLogicScoringCaloEntrance->SetSensitiveDetector(scoringCaloEntranceSD);
+
+    auto* scoringCaloExitSD = new G4MultiFunctionalDetector("ScoringCaloExitSD");
+    sdManager->AddNewDetector(scoringCaloExitSD);
+    
+    auto* scoringCaloExitEnergyDep = new G4PSEnergyDeposit("EnergyDeposit");
+    scoringCaloExitSD->RegisterPrimitive(scoringCaloExitEnergyDep);
+    
+    auto* scoringCaloExitNofSecondary = new G4PSNofSecondary("NofSecondary");
+    scoringCaloExitSD->RegisterPrimitive(scoringCaloExitNofSecondary);
+    
+    fLogicScoringCaloExit->SetSensitiveDetector(scoringCaloExitSD);
 
     // fMagField = new MagneticField();
     // auto* fieldMgr = new G4FieldManager();

@@ -6,6 +6,7 @@
 #include "G4Track.hh"
 #include "G4VPhysicalVolume.hh"
 #include "G4SystemOfUnits.hh"
+#include "G4StepStatus.hh"
 #include "analysis.h"
 
 class DamsaSteppingAction : public G4UserSteppingAction
@@ -26,20 +27,43 @@ DamsaSteppingAction::~DamsaSteppingAction()
 
 void DamsaSteppingAction::UserSteppingAction(const G4Step* step)
 {
-    G4VPhysicalVolume* volume = step->GetPreStepPoint()->GetTouchableHandle()->GetVolume();
+    G4Track* track = step->GetTrack();
+    G4VPhysicalVolume* volume = step->GetPostStepPoint()->GetTouchableHandle()->GetVolume();
+    G4StepStatus stepStatus = step->GetPostStepPoint()->GetStepStatus();
     
-    if(volume->GetName() == "physScoringVolumeDetector") {
-        G4Track* track = step->GetTrack();
+    // Only record particles when they FIRST ENTER the scoring volume (boundary crossing)
+    // PostStepPoint = where particle IS NOW (just entered the volume)
+    if(stepStatus != fGeomBoundary) return;  // Not at a boundary, skip
+    
+    // Now record particles at boundaries
+    if(volume->GetName() == "physScoringMagnetEntrance") {
         G4String particleName = track->GetDefinition()->GetParticleName();
         G4double energy = track->GetKineticEnergy();
         
         G4ThreeVector momentum = track->GetMomentumDirection();
         G4double angle = momentum.angle(G4ThreeVector(0, 0, 1));
         
-        DamsaAnalysis::Instance()->RecordParticle(particleName, energy, "DetectorEntrance", angle);
+        DamsaAnalysis::Instance()->RecordParticle(particleName, energy, "MagnetEntrance", angle);
+    }
+    else if(volume->GetName() == "physScoringCaloEntrance") {
+        G4String particleName = track->GetDefinition()->GetParticleName();
+        G4double energy = track->GetKineticEnergy();
+        
+        G4ThreeVector momentum = track->GetMomentumDirection();
+        G4double angle = momentum.angle(G4ThreeVector(0, 0, 1));
+        
+        DamsaAnalysis::Instance()->RecordParticle(particleName, energy, "CaloEntrance", angle);
+    }
+    else if(volume->GetName() == "physScoringCaloExit") {
+        G4String particleName = track->GetDefinition()->GetParticleName();
+        G4double energy = track->GetKineticEnergy();
+        
+        G4ThreeVector momentum = track->GetMomentumDirection();
+        G4double angle = momentum.angle(G4ThreeVector(0, 0, 1));
+        
+        DamsaAnalysis::Instance()->RecordParticle(particleName, energy, "CaloExit", angle);
     }
     else if(volume->GetName() == "physScoringVolumeTarget") {
-        G4Track* track = step->GetTrack();
         G4String particleName = track->GetDefinition()->GetParticleName();
         G4double energy = track->GetKineticEnergy();
         
