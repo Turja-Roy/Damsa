@@ -4,6 +4,7 @@
 #include "G4VUserDetectorConstruction.hh"
 #include "G4VPhysicalVolume.hh"
 #include "G4LogicalVolume.hh"
+#include "G4Material.hh"
 #include "G4Box.hh"
 #include "G4Tubs.hh"
 #include "G4SubtractionSolid.hh"
@@ -31,7 +32,7 @@ public:
     virtual G4VPhysicalVolume* Construct() override;
 
 private:
-    // virtual void ConstructSDandField();
+    virtual void ConstructSDandField() override;
     
     void DefineMaterials();
     void BuildTarget(G4LogicalVolume* worldLV, G4double& zPos);
@@ -52,6 +53,14 @@ private:
     G4LogicalVolume* fLogicCrystal;
     G4LogicalVolume* fLogicMagnetHollow;
     G4MagneticField* fMagField;
+    
+    G4Material* fMatAir;
+    G4Material* fMatVacuum;
+    G4Material* fMatTungsten;
+    G4Material* fMatStainlessSteel;
+    G4Material* fMatSilicon;
+    G4Material* fMatCsI;
+    G4Material* fMatNeodymium;
 };
 
 #endif

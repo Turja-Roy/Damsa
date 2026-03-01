@@ -26,12 +26,10 @@ int main (int argc, char *argv[])
     G4cout << "Scanning beam energies from 1 MeV to 1 GeV" << G4endl;
     G4cout << "Measuring backgrounds vs beam energy\n" << G4endl;
     
-    // Energy scan: 1 MeV to 1 GeV
     G4double energies[] = {1*MeV, 10*MeV, 100*MeV, 500*MeV, 800*MeV, 1*GeV};
     G4int nEnergies = 6;
     G4int eventsPerEnergy = 100;
     
-    // Get the generator from action initialization
     const G4VUserPrimaryGeneratorAction* genAction = 
         runManager->GetUserPrimaryGeneratorAction();
     DamsaPrimaryGenerator* primaryGenerator = 
@@ -41,22 +39,17 @@ int main (int argc, char *argv[])
         G4cout << "\n--- Energy Point " << i+1 << "/" << nEnergies << " ---" << G4endl;
         G4cout << "Beam Energy: " << energies[i]/MeV << " MeV" << G4endl;
         
-        // Set beam energy
         primaryGenerator->SetBeamEnergy(energies[i]);
         
-        // Run events
         G4String command = "/run/beamOn " + std::to_string(eventsPerEnergy);
         UIManager->ApplyCommand(command);
         
-        // Print and save analysis
         DamsaAnalysis::Instance()->PrintSummary();
         
-        // Save to text file
         std::stringstream filename;
         filename << "analysis_" << energies[i]/MeV << "MeV.txt";
         DamsaAnalysis::Instance()->SaveToFile(filename.str());
         
-        // Save ROOT histograms and plots
         std::stringstream rootfile;
         rootfile << "particles_" << energies[i]/MeV << "MeV.root";
         DamsaAnalysis::Instance()->WriteROOTHistograms(rootfile.str());

@@ -5,6 +5,7 @@
 #include "G4Step.hh"
 #include "G4Track.hh"
 #include "G4VPhysicalVolume.hh"
+#include "G4SystemOfUnits.hh"
 #include "analysis.h"
 
 class DamsaSteppingAction : public G4UserSteppingAction
@@ -36,8 +37,6 @@ void DamsaSteppingAction::UserSteppingAction(const G4Step* step)
         G4double angle = momentum.angle(G4ThreeVector(0, 0, 1));
         
         DamsaAnalysis::Instance()->RecordParticle(particleName, energy, "DetectorEntrance", angle);
-        
-        track->SetTrackStatus(fStopAndKill);
     }
     else if(volume->GetName() == "physScoringVolumeTarget") {
         G4Track* track = step->GetTrack();

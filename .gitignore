@@ -1,3 +1,4 @@
-build/
+build/*
 AGENTS.md
-damsa-masoom/
+Ref/*
+Reading/*

@@ -160,7 +160,6 @@ void DamsaAnalysis::PrintSummary()
     G4cout << "Total Energy: " << fDetectorEnergy/GeV << " GeV" << G4endl;
     G4cout << "=============================================\n" << G4endl;
 
-    // Print photon energy histogram
     if(fDetectorPhotonEnergyCount > 0) {
         G4cout << "\n=== Photon Energy Spectrum at Detector Entrance ===" << G4endl;
         G4double bins[] = {0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 1.0, 2.0, 4.0, 8.0};
@@ -184,7 +183,6 @@ void DamsaAnalysis::PrintSummary()
         G4cout << "  Total photons recorded: " << fDetectorPhotonEnergyCount << G4endl;
     }
     
-    // Print photon angular distribution
     if(fDetectorPhotonEnergyCount > 0) {
         G4cout << "\n=== Photon Angular Distribution at Detector Entrance ===" << G4endl;
         G4double angleBins[] = {0.0, 5.0, 10.0, 20.0, 30.0, 45.0, 60.0, 90.0};
@@ -211,7 +209,6 @@ void DamsaAnalysis::PrintSummary()
     
     G4cout << "=============================================\n" << G4endl;
     
-    // Neutron energy and angular distribution
     if(fDetectorNeutronCount > 0) {
         G4cout << "\n=== Neutron Energy Spectrum at Detector Entrance ===" << G4endl;
         G4double neutronEnergyBins[] = {0.0, 0.1, 0.5, 1.0, 2.0, 5.0, 10.0, 50.0, 100.0};
@@ -255,7 +252,6 @@ void DamsaAnalysis::PrintSummary()
         }
     }
     
-    // Electron energy and angular distribution
     if(fDetectorElectronCount > 0) {
         G4cout << "\n=== Electron Energy Spectrum at Detector Entrance ===" << G4endl;
         G4double electronEnergyBins[] = {0.0, 0.1, 0.2, 0.5, 1.0, 2.0, 4.0, 8.0};
@@ -299,7 +295,6 @@ void DamsaAnalysis::PrintSummary()
         }
     }
     
-    // Positron energy and angular distribution
     if(fDetectorPositronCount > 0) {
         G4cout << "\n=== Positron Energy Spectrum at Detector Entrance ===" << G4endl;
         G4double positronEnergyBins[] = {0.0, 0.1, 0.2, 0.5, 1.0, 2.0, 4.0, 8.0};
@@ -348,7 +343,6 @@ void DamsaAnalysis::PrintSummary()
 
 void DamsaAnalysis::SaveToFile(const G4String& filename)
 {
-    // Create output directory if it doesn't exist
     mkdir("output", 0755);
     
     std::string fullPath = "output/" + filename;
@@ -572,7 +566,6 @@ void DamsaAnalysis::SaveToFile(const G4String& filename)
 
 void DamsaAnalysis::WriteROOTHistograms(const G4String& filename)
 {
-    // Create plots directory if it doesn't exist
     mkdir("plots", 0755);
     
     std::string rootPath = "plots/" + filename;
