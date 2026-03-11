@@ -43,8 +43,8 @@ private:
     G4double fWorldSize;
     G4double fTargetX, fTargetY, fTargetZ;
     G4double fChamberInnerRadius, fChamberWallThickness, fChamberLength;
-    G4double fMagnetOuterSize, fMagnetHollowSize;
-    G4double fTrackerSizeXY, fTrackerThickness, fTrackerHoleSize;
+    G4double fMagnetOuterSizeXY, fMagnetOuterSizeZ, fMagnetHollowSizeXY, fMagnetHollowSizeZ;
+    G4double fTrackerSizeXY, fTrackerThickness;
     G4int fNumTrackers;
     G4double fCaloSizeXY, fLayerThickness;
     G4int fNumCaloLayers, fNumCrystalsPerLayer;

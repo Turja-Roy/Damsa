@@ -22,12 +22,13 @@ DamsaDetectorConstruction::DamsaDetectorConstruction()
     fChamberWallThickness = 0.5*cm;
     fChamberLength = 30.0*cm;
 
-    fMagnetOuterSize = 20.0*cm;
-    fMagnetHollowSize = 10.0*cm;
+    fMagnetOuterSizeXY = 20.0*cm;
+    fMagnetOuterSizeZ = 12.0*cm;
+    fMagnetHollowSizeXY = 10.0*cm;
+    fMagnetHollowSizeZ = fMagnetOuterSizeZ;
 
     fTrackerSizeXY = 9.8*cm;
     fTrackerThickness = 0.2*cm;
-    fTrackerHoleSize = 2.0*cm;
     fNumTrackers = 6;
 
     fCaloSizeXY = 12.0*cm;
@@ -89,6 +90,7 @@ void DamsaDetectorConstruction::BuildVacuumChamber(G4LogicalVolume* worldLV, G4d
 {
     G4double chamberOuterRadius = fChamberInnerRadius + fChamberWallThickness;
 
+    // Chamber wall (cylindrical tube)
     auto* solidChamberOuter = new G4Tubs("solidChamberOuter", 0., chamberOuterRadius, fChamberLength/2., 0., 360.*deg);
     auto* solidChamberInner = new G4Tubs("solidChamberInner", 0., fChamberInnerRadius, fChamberLength/2., 0., 360.*deg);
 
@@ -99,30 +101,32 @@ void DamsaDetectorConstruction::BuildVacuumChamber(G4LogicalVolume* worldLV, G4d
     chamberWallVis->SetForceSolid(true);
     logicChamberWall->SetVisAttributes(chamberWallVis);
 
-    G4double tungstenSize = fTargetX;
-
-    auto* solidEndCapFull = new G4Tubs("solidEndCapFull", 0., chamberOuterRadius, fChamberWallThickness/2., 0., 360.*deg);
-    auto* solidTungstenOpening = new G4Box("solidTungstenOpening", tungstenSize/2., tungstenSize/2., fChamberWallThickness/2.);
-    auto* solidMagnetOpening = new G4Box("solidMagnetOpening", fMagnetHollowSize/2., fMagnetHollowSize/2., fChamberWallThickness/2.);
-
-    auto* solidEndCapFront = new G4SubtractionSolid("solidEndCapFront", solidEndCapFull, solidTungstenOpening);
-    auto* logicEndCapFront = new G4LogicalVolume(solidEndCapFront, fMatStainlessSteel, "logicEndCapFront");
+    // End caps: solid discs placed INSIDE the chamber (as part of the vacuum volume geometry)
+    // They seal the chamber at both ends. End cap thickness reduces the vacuum region.
+    auto* solidEndCap = new G4Tubs("solidEndCap", 0., fChamberInnerRadius, fChamberWallThickness/2., 0., 360.*deg);
+    
+    auto* logicEndCapFront = new G4LogicalVolume(solidEndCap, fMatStainlessSteel, "logicEndCapFront");
     logicEndCapFront->SetVisAttributes(chamberWallVis);
 
-    auto* solidEndCapBack = new G4SubtractionSolid("solidEndCapBack", solidEndCapFull, solidMagnetOpening);
-    auto* logicEndCapBack = new G4LogicalVolume(solidEndCapBack, fMatStainlessSteel, "logicEndCapBack");
+    auto* logicEndCapBack = new G4LogicalVolume(solidEndCap, fMatStainlessSteel, "logicEndCapBack");
     logicEndCapBack->SetVisAttributes(chamberWallVis);
 
+    // Vacuum region is the full chamber inner volume (end caps will be placed as daughters)
     auto* logicChamberVacuum = new G4LogicalVolume(solidChamberInner, fMatVacuum, "logicChamberVacuum");
     logicChamberVacuum->SetVisAttributes(G4VisAttributes::GetInvisible());
 
-    // Target exit scoring volume (placed inside vacuum chamber)
-    // Target rear face is at zPos (current value), scoring plane 0.1mm after
-    G4double targetExitZ_absolute = zPos + 0.1*mm;
-    G4double chamberCenterZ_absolute = zPos + fChamberLength/2.;  // Chamber will be centered here
-    G4double targetExitZ_local = targetExitZ_absolute - chamberCenterZ_absolute;  // Local Z in chamber frame
+    // Place end caps inside the vacuum volume at the front and back
+    G4double endCapLocalFrontZ = -fChamberLength/2. + fChamberWallThickness/2.;
+    G4double endCapLocalBackZ = fChamberLength/2. - fChamberWallThickness/2.;
+    new G4PVPlacement(0, G4ThreeVector(0., 0., endCapLocalFrontZ), logicEndCapFront, "physEndCapFront", logicChamberVacuum, false, 0, true);
+    new G4PVPlacement(0, G4ThreeVector(0., 0., endCapLocalBackZ), logicEndCapBack, "physEndCapBack", logicChamberVacuum, false, 1, true);
+
+    // Target exit scoring volume (placed inside vacuum chamber, after front end cap)
+    // Target rear face is at zPos (current value), scoring plane just after front end cap
+    G4double scoringZ_local = endCapLocalFrontZ + fChamberWallThickness/2.;  // Just after front end cap
     
-    auto* solidScoringTarget = new G4Box("solidScoringTarget", fTargetX/2.0, fTargetY/2.0, 0.1*mm);
+    // Circular scoring plane matching chamber inner radius to capture all particles entering decay chamber
+    auto* solidScoringTarget = new G4Tubs("solidScoringTarget", 0., fChamberInnerRadius, 0.1*mm, 0., 360.*deg);
     auto* logicScoringTarget = new G4LogicalVolume(solidScoringTarget, 
                                                    fMatVacuum, 
                                                    "logicScoringTarget");
@@ -132,19 +136,14 @@ void DamsaDetectorConstruction::BuildVacuumChamber(G4LogicalVolume* worldLV, G4d
     // logicScoringTarget->SetVisAttributes(G4VisAttributes::GetInvisible());
     
     // Place scoring plane inside vacuum chamber volume
-    new G4PVPlacement(0, G4ThreeVector(0., 0., targetExitZ_local), 
+    new G4PVPlacement(0, G4ThreeVector(0., 0., scoringZ_local), 
                       logicScoringTarget, "physScoringVolumeTarget", logicChamberVacuum, false, 0, true);
 
     zPos += fChamberLength/2.;
     new G4PVPlacement(0, G4ThreeVector(0., 0., zPos), logicChamberWall, "physChamberWall", worldLV, false, 0, true);
     new G4PVPlacement(0, G4ThreeVector(0., 0., zPos), logicChamberVacuum, "physChamberVacuum", worldLV, false, 0, true);
 
-    G4double endCapFrontZ = zPos - fChamberLength/2. - fChamberWallThickness/2.;
-    G4double endCapBackZ = zPos + fChamberLength/2. + fChamberWallThickness/2.;
-    new G4PVPlacement(0, G4ThreeVector(0., 0., endCapFrontZ), logicEndCapFront, "physEndCapFront", worldLV, false, 0, true);
-    new G4PVPlacement(0, G4ThreeVector(0., 0., endCapBackZ), logicEndCapBack, "physEndCapBack", worldLV, false, 1, true);
-
-    zPos += fChamberLength/2. + fChamberWallThickness;
+    zPos += fChamberLength/2.;
 }
 
 void DamsaDetectorConstruction::BuildMagnetAndTrackerRegion(G4LogicalVolume* worldLV, G4double& zPos)
@@ -152,15 +151,15 @@ void DamsaDetectorConstruction::BuildMagnetAndTrackerRegion(G4LogicalVolume* wor
     // Air-filled region placed directly in world to avoid subtraction solid navigation issues.
     // Neodymium magnet frame disabled (B=0).
 
-    auto* solidMagnetHollow = new G4Box("solidMagnetHollow", fMagnetHollowSize/2., fMagnetHollowSize/2., fMagnetOuterSize/2.);
+    auto* solidMagnetHollow = new G4Box("solidMagnetHollow", fMagnetHollowSizeXY/2., fMagnetHollowSizeXY/2., fMagnetHollowSizeZ/2.);
     fLogicMagnetHollow = new G4LogicalVolume(solidMagnetHollow, fMatAir, "logicMagnetHollow");
     fLogicMagnetHollow->SetVisAttributes(G4VisAttributes::GetInvisible());
 
-    zPos += fMagnetOuterSize/2.;
+    zPos += fMagnetOuterSizeZ/2.;
     new G4PVPlacement(0, G4ThreeVector(0., 0., zPos), fLogicMagnetHollow, "physMagnetHollow", worldLV, false, 0, true);
 
     // Neodymium magnet (disabled)
-    // auto* solidMagnetOuter = new G4Box("solidMagnetOuter", fMagnetOuterSize/2., fMagnetOuterSize/2., fMagnetOuterSize/2.);
+    // auto* solidMagnetOuter = new G4Box("solidMagnetOuter", fMagnetOuterSizeXY/2., fMagnetOuterSizeXY/2., fMagnetOuterSizeZ/2.);
     // auto* solidMagnet = new G4SubtractionSolid("solidMagnet", solidMagnetOuter, solidMagnetHollow);
     // auto* logicMagnet = new G4LogicalVolume(solidMagnet, fMatNeodymium, "logicMagnet");
     // auto* magnetVis = new G4VisAttributes(G4Colour(0.5, 0.5, 0.5, 0.3));
@@ -169,10 +168,10 @@ void DamsaDetectorConstruction::BuildMagnetAndTrackerRegion(G4LogicalVolume* wor
     // new G4PVPlacement(0, G4ThreeVector(0., 0., zPos), logicMagnet, "physMagnet", worldLV, false, 0, true);
 
     // Magnet entrance scoring volume
-    G4double hollowHalfZ = fMagnetOuterSize/2.;
+    G4double hollowHalfZ = fMagnetOuterSizeZ/2.;
 
     G4double scoringHalfThickness = 0.05*mm;  // Match reference implementation (0.1mm total thickness)
-    auto* solidScoringMagnetEntrance = new G4Box("solidScoringMagnetEntrance", 4.45*cm, 4.45*cm, scoringHalfThickness);
+    auto* solidScoringMagnetEntrance = new G4Box("solidScoringMagnetEntrance", fTrackerSizeXY/2., fTrackerSizeXY/2., scoringHalfThickness);
     fLogicScoringMagnetEntrance = new G4LogicalVolume(solidScoringMagnetEntrance,
                                                       fMatVacuum,
                                                       "logicScoringMagnetEntrance");
@@ -186,14 +185,14 @@ void DamsaDetectorConstruction::BuildMagnetAndTrackerRegion(G4LogicalVolume* wor
                       fLogicScoringMagnetEntrance, "physScoringMagnetEntrance", 
                       fLogicMagnetHollow, false, 0, true);
 
-    G4double zClearance = 0.7*mm;  // Clearance for scoring volume and boundary
-    G4double availableSpace = 2.*hollowHalfZ - 2.*zClearance - fNumTrackers * fTrackerThickness;
-    G4double trackerSpacing = availableSpace / (fNumTrackers - 1);
+    // With N trackers, there are (N+1) equal gaps
+    G4double totalLength = 2.*hollowHalfZ;
+    G4double totalTrackerLength = fNumTrackers * fTrackerThickness;
+    G4double numGaps = fNumTrackers + 1;
+    G4double gapSize = (totalLength - totalTrackerLength) / numGaps;
 
     G4double trackerFitSize = fTrackerSizeXY - 0.2*mm;
-    auto* solidSiTrackerFull = new G4Box("solidSiTrackerFull", trackerFitSize/2., trackerFitSize/2., fTrackerThickness/2.);
-    auto* solidTrackerHole = new G4Box("solidTrackerHole", fTrackerHoleSize/2., fTrackerHoleSize/2., fTrackerThickness/2.);
-    auto* solidSiTracker = new G4SubtractionSolid("solidSiTracker", solidSiTrackerFull, solidTrackerHole);
+    auto* solidSiTracker = new G4Box("solidSiTracker", trackerFitSize/2., trackerFitSize/2., fTrackerThickness/2.);
     fLogicSiTracker = new G4LogicalVolume(solidSiTracker, fMatSilicon, "logicSiTracker");
 
     auto* trackerVis = new G4VisAttributes(G4Colour(0.0, 1.0, 1.0, 0.8));
@@ -201,11 +200,12 @@ void DamsaDetectorConstruction::BuildMagnetAndTrackerRegion(G4LogicalVolume* wor
     fLogicSiTracker->SetVisAttributes(trackerVis);
 
     for (G4int i = 0; i < fNumTrackers; i++) {
-        G4double localZ = -hollowHalfZ + zClearance + fTrackerThickness/2. + i * (fTrackerThickness + trackerSpacing);
+        // Position: -halfZ + (i+1)*gap + i*thickness + thickness/2
+        G4double localZ = -hollowHalfZ + (i + 1) * gapSize + i * fTrackerThickness + fTrackerThickness/2.;
         new G4PVPlacement(0, G4ThreeVector(0., 0., localZ), fLogicSiTracker, "physSiTracker", fLogicMagnetHollow, false, i, true);
     }
 
-    zPos += fMagnetOuterSize/2.;
+    zPos += fMagnetOuterSizeZ/2.;
 }
 
 void DamsaDetectorConstruction::BuildCalorimeter(G4LogicalVolume* worldLV, G4double& zPos)
