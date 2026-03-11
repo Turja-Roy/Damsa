@@ -14,6 +14,7 @@
 #include "TGraph.h"
 #include "TGraphErrors.h"
 #include "TLine.h"
+#include "TEllipse.h"
 #include "TPad.h"
 #include "TGaxis.h"
 #include "TColor.h"
@@ -106,13 +107,13 @@ inline void StyleHist2D(TH2D* h, const char* xtitle, const char* ytitle, const c
 inline void CreatePlotDirectories() {
     mkdir("plots", 0755);
     mkdir("plots/png", 0755);
-    mkdir("plots/png/targetexit", 0755);
-    mkdir("plots/png/magnetentrance", 0755);
-    mkdir("plots/png/caloentrance", 0755);
-    mkdir("plots/png/caloexit", 0755);
+    mkdir("plots/png/TargetExit", 0755);
+    mkdir("plots/png/MagnetEntrance", 0755);
+    mkdir("plots/png/CaloEntrance", 0755);
+    mkdir("plots/png/CaloExit", 0755);
     mkdir("plots/png/comparison", 0755);
     mkdir("plots/png/statistics", 0755);
-    mkdir("plots/summary", 0755);
+    mkdir("plots/png/summary", 0755);
 }
 
 // Save canvas in PNG format
@@ -133,15 +134,28 @@ inline TH1D* CreateNormalizedCopy(TH1D* h, const char* suffix) {
     return hNorm;
 }
 
-// Create 1D energy histogram from vector data
+// Create 1D energy histogram from vector data (in MeV)
 inline TH1D* CreateEnergyHist(const std::vector<double>& energies, 
                               const char* name, const char* title,
-                              Color_t color, double maxE = 8.0, int nbins = 80) {
-    TH1D* h = new TH1D(name, title, nbins, 0, maxE);
+                              Color_t color, double maxE = -1.0, int nbins = 80) {
+    double actualMaxE = maxE;
+    if (maxE < 0 && energies.size() > 0) {
+        actualMaxE = *max_element(energies.begin(), energies.end());
+        actualMaxE *= 1.2;
+        if (actualMaxE < 10.0) actualMaxE = 10.0;
+        else if (actualMaxE < 50.0) actualMaxE = 50.0;
+        else if (actualMaxE < 100.0) actualMaxE = 100.0;
+        else if (actualMaxE < 500.0) actualMaxE = 500.0;
+        else if (actualMaxE < 1000.0) actualMaxE = 1000.0;
+        else actualMaxE = 8000.0;
+    } else if (maxE < 0) {
+        actualMaxE = 100.0;
+    }
+    TH1D* h = new TH1D(name, title, nbins, 0, actualMaxE);
     for(size_t i = 0; i < energies.size(); i++) {
         h->Fill(energies[i]);
     }
-    StyleHist1D(h, color, "Energy [GeV]", "Counts");
+    StyleHist1D(h, color, "Energy [MeV]", "Counts");
     return h;
 }
 
@@ -157,38 +171,175 @@ inline TH1D* CreateAngleHist(const std::vector<double>& angles,
     return h;
 }
 
-// Create 2D Angle vs Energy heatmap with auto-ranging (Angle on X, Energy on Y)
+// Create 2D Angle vs Energy heatmap with auto-ranging (Angle on X, Energy on Y, in MeV)
 inline TH2D* CreateEnergyAngleHist(const std::vector<double>& energies,
                                    const std::vector<double>& angles,
                                    const char* name, const char* title,
                                    double maxE = -1.0) {
-    // Auto-detect energy range if not specified (maxE < 0)
     double actualMaxE = maxE;
     if(maxE < 0 && energies.size() > 0) {
         actualMaxE = 0;
         for(size_t i = 0; i < energies.size(); i++) {
             if(energies[i] > actualMaxE) actualMaxE = energies[i];
         }
-        // Add 20% headroom and round up to nice values
         actualMaxE *= 1.2;
-        if(actualMaxE < 0.1) actualMaxE = 0.1;
-        else if(actualMaxE < 0.5) actualMaxE = 0.5;
-        else if(actualMaxE < 1.0) actualMaxE = 1.0;
-        else if(actualMaxE < 2.0) actualMaxE = 2.0;
-        else if(actualMaxE < 5.0) actualMaxE = 5.0;
-        else if(actualMaxE < 10.0) actualMaxE = 10.0;
-        else actualMaxE = 8.0;  // Cap at beam energy
+        if(actualMaxE < 10.0) actualMaxE = 10.0;
+        else if(actualMaxE < 50.0) actualMaxE = 50.0;
+        else if(actualMaxE < 100.0) actualMaxE = 100.0;
+        else if(actualMaxE < 500.0) actualMaxE = 500.0;
+        else if(actualMaxE < 1000.0) actualMaxE = 1000.0;
+        else actualMaxE = 8000.0;
     } else if(maxE < 0) {
-        actualMaxE = 8.0;  // Default if no data
+        actualMaxE = 100.0;
     }
     
-    // X-axis: Angle (0-90 deg), Y-axis: Energy (0-maxE GeV)
     TH2D* h = new TH2D(name, title, 45, 0, 90, 50, 0, actualMaxE);
     for(size_t i = 0; i < energies.size() && i < angles.size(); i++) {
         h->Fill(angles[i] * 180.0 / 3.14159265, energies[i]);
     }
-    StyleHist2D(h, "Angle [degrees]", "Energy [GeV]", "Counts");
+    StyleHist2D(h, "Angle [degrees]", "Energy [MeV]", "Counts");
     return h;
+}
+
+// Create 2D histogram: X=Angle, Y=Counts, Color=Mean Energy
+inline TH2D* CreateAngleCountEnergyHist(const std::vector<double>& energies,
+                                      const std::vector<double>& angles,
+                                      const char* name, const char* title,
+                                      double maxE = -1.0) {
+    const int nAngleBins = 18;
+    double angleBins[nAngleBins + 1];
+    for (int i = 0; i <= nAngleBins; i++) {
+        angleBins[i] = i * 5.0;
+    }
+    
+    const int nEnergyBins = 20;
+    double actualMaxE = 1.0;
+    if (maxE < 0 && energies.size() > 0) {
+        actualMaxE = 0;
+        for (double e : energies) {
+            if (e > actualMaxE) actualMaxE = e;
+        }
+        actualMaxE *= 1.2;
+    }
+    if (actualMaxE <= 0) actualMaxE = 1.0;
+    
+    TH2D* h = new TH2D(name, title, nAngleBins, angleBins, nEnergyBins, 0, actualMaxE);
+    
+    std::vector<double> sumEnergies(nAngleBins, 0.0);
+    std::vector<int> counts(nAngleBins, 0);
+    
+    for (size_t i = 0; i < energies.size() && i < angles.size(); i++) {
+        double angleDeg = angles[i] * 180.0 / 3.14159265;
+        int binX = (int)(angleDeg / 5.0);
+        if (binX >= nAngleBins) binX = nAngleBins - 1;
+        if (binX < 0) binX = 0;
+        
+        sumEnergies[binX] += energies[i];
+        counts[binX]++;
+    }
+    
+    for (int i = 0; i < nAngleBins; i++) {
+        if (counts[i] > 0) {
+            double meanE = sumEnergies[i] / counts[i];
+            for (int j = 1; j <= nEnergyBins; j++) {
+                h->SetBinContent(i + 1, j, meanE);
+            }
+            h->SetBinContent(i + 1, 1, counts[i]);
+        }
+    }
+    
+    StyleHist2D(h, "Angle [degrees]", "Counts", "Mean Energy [GeV]");
+    return h;
+}
+
+// Create proper polar plot: angle -> polar angle, energy -> radius from center
+inline TCanvas* CreatePolarPlot(const std::vector<double>& energies,
+                                const std::vector<double>& angles,
+                                const char* canvasName,
+                                const char* title,
+                                double maxE = -1.0) {
+    double actualMaxE = maxE;
+    if (maxE < 0 && energies.size() > 0) {
+        for (double e : energies) {
+            if (e > actualMaxE) actualMaxE = e;
+        }
+    }
+    if (actualMaxE <= 0) actualMaxE = 0.1;
+    actualMaxE *= 1.2;
+    
+    TCanvas* c = new TCanvas(canvasName, title, 900, 900);
+    c->SetMargin(0.1, 0.1, 0.1, 0.1);
+    c->cd();
+    
+    TH2F* hFrame = new TH2F("hFrame", title, 100, -1.2, 1.2, 100, -1.2, 1.2);
+    hFrame->GetXaxis()->SetLabelOffset(99);
+    hFrame->GetYaxis()->SetLabelOffset(99);
+    hFrame->GetXaxis()->SetNdivisions(0);
+    hFrame->GetYaxis()->SetNdivisions(0);
+    hFrame->SetBit(TH1::kNoStats);
+    hFrame->SetLineColor(0);
+    hFrame->Draw();
+    
+    double rMax = 1.0;
+    TEllipse* outerCircle = new TEllipse(0, 0, rMax, rMax);
+    outerCircle->SetLineStyle(2);
+    outerCircle->SetLineColor(kGray);
+    outerCircle->Draw();
+    
+    TEllipse* midCircle = new TEllipse(0, 0, rMax*0.66, rMax*0.66);
+    midCircle->SetLineStyle(2);
+    midCircle->SetLineColor(kGray);
+    midCircle->Draw();
+    
+    TEllipse* innerCircle = new TEllipse(0, 0, rMax*0.33, rMax*0.33);
+    innerCircle->SetLineStyle(2);
+    innerCircle->SetLineColor(kGray);
+    innerCircle->Draw();
+    
+    TLine* line0 = new TLine(-rMax, 0, rMax, 0);
+    line0->SetLineStyle(2);
+    line0->SetLineColor(kGray);
+    line0->Draw();
+    
+    TLine* line90 = new TLine(0, -rMax, 0, rMax);
+    line90->SetLineStyle(2);
+    line90->SetLineColor(kGray);
+    line90->Draw();
+    
+    TLatex* lat0 = new TLatex(rMax + 0.05, 0, "0#circ");
+    lat0->Draw();
+    TLatex* lat90 = new TLatex(0.02, rMax + 0.05, "90#circ");
+    lat90->Draw();
+    
+    TLatex* latE1 = new TLatex(rMax*0.33, 0.03, Form("E=%.2f", actualMaxE*0.33));
+    latE1->SetTextSize(0.02);
+    latE1->Draw();
+    TLatex* latE2 = new TLatex(rMax*0.66, 0.03, Form("E=%.2f", actualMaxE*0.66));
+    latE2->SetTextSize(0.02);
+    latE2->Draw();
+    TLatex* latE3 = new TLatex(rMax*0.95, 0.03, Form("E=%.2f", actualMaxE));
+    latE3->SetTextSize(0.02);
+    latE3->Draw();
+    
+    if (!energies.empty()) {
+        std::vector<double> xVals, yVals;
+        for (size_t i = 0; i < energies.size() && i < angles.size(); i++) {
+            double E = energies[i] / actualMaxE;
+            double angle = angles[i];
+            double x = E * cos(angle);
+            double y = E * sin(angle);
+            xVals.push_back(x);
+            yVals.push_back(y);
+        }
+        
+        TGraph* g = new TGraph(xVals.size(), xVals.data(), yVals.data());
+        g->SetMarkerStyle(20);
+        g->SetMarkerSize(1.5);
+        g->SetMarkerColor(kBlue);
+        g->Draw("P SAME");
+    }
+    
+    return c;
 }
 
 // Create overlay of 4 particle histograms on one canvas
